@@ -1,0 +1,169 @@
+# USB转串口厂商配置文件
+# 定义各种USB转串口芯片的厂商ID、产品ID和优先级
+# 支持自定义厂商规则，无需修改代码
+
+# 厂商定义
+vendors:
+  # FTDI厂商
+  ftdi:
+    name: "FTDI"
+    description: "FTDI USB转串口芯片"
+    vendor_id: "0403"
+    products:
+      - product_id: "6001"
+        name: "FT232R"
+        description: "FTDI FT232R USB转串口芯片"
+        priority: 100
+        chip_type: "FTDI_FT232R"
+      - product_id: "6006"
+        name: "FT232H"
+        description: "FTDI FT232H USB转串口芯片"
+        priority: 100
+        chip_type: "FTDI_FT232H"
+      - product_id: "6010"
+        name: "FT2232H"
+        description: "FTDI FT2232H USB转串口芯片"
+        priority: 95
+        chip_type: "FTDI_FT2232H"
+      - product_id: "6011"
+        name: "FT4232H"
+        description: "FTDI FT4232H USB转串口芯片"
+        priority: 95
+        chip_type: "FTDI_FT4232H"
+      - product_id: "6014"
+        name: "FT2232C"
+        description: "FTDI FT2232C USB转串口芯片"
+        priority: 90
+        chip_type: "FTDI_FT2232C"
+      - product_id: "6015"
+        name: "FT2232D"
+        description: "FTDI FT2232D USB转串口芯片"
+        priority: 90
+        chip_type: "FTDI_FT2232D"
+
+  # Silicon Labs (CP210x)厂商
+  silicon_labs:
+    name: "Silicon Labs"
+    description: "Silicon Labs CP210x USB转串口芯片"
+    vendor_id: "10c4"
+    products:
+      - product_id: "ea60"
+        name: "CP2102"
+        description: "Silicon Labs CP2102 USB转串口芯片"
+        priority: 90
+        chip_type: "CP210x"
+      - product_id: "ea61"
+        name: "CP2103"
+        description: "Silicon Labs CP2103 USB转串口芯片"
+        priority: 90
+        chip_type: "CP210x"
+      - product_id: "ea70"
+        name: "CP2104"
+        description: "Silicon Labs CP2104 USB转串口芯片"
+        priority: 90
+        chip_type: "CP210x"
+      - product_id: "ea71"
+        name: "CP2105"
+        description: "Silicon Labs CP2105 USB转串口芯片"
+        priority: 90
+        chip_type: "CP210x"
+      - product_id: "ea80"
+        name: "CP2108"
+        description: "Silicon Labs CP2108 USB转串口芯片"
+        priority: 90
+        chip_type: "CP210x"
+      - product_id: "ea81"
+        name: "CP2109"
+        description: "Silicon Labs CP2109 USB转串口芯片"
+        priority: 90
+        chip_type: "CP210x"
+
+  # 沁恒 (CH34x)厂商
+  wch:
+    name: "WCH (沁恒)"
+    description: "沁恒CH34x USB转串口芯片"
+    vendor_id: "1a86"
+    products:
+      - product_id: "7523"
+        name: "CH340"
+        description: "沁恒CH340 USB转串口芯片"
+        priority: 80
+        chip_type: "CH34x"
+      - product_id: "5523"
+        name: "CH341"
+        description: "沁恒CH341 USB转串口芯片"
+        priority: 80
+        chip_type: "CH34x"
+
+  # Prolific (PL2303)厂商
+  prolific:
+    name: "Prolific"
+    description: "Prolific PL2303 USB转串口芯片"
+    vendor_id: "067b"
+    products:
+      - product_id: "2303"
+        name: "PL2303"
+        description: "Prolific PL2303 USB转串口芯片"
+        priority: 60
+        chip_type: "PL2303"
+
+  # CDC ACM设备（通用USB转串口）
+  cdc_acm:
+    name: "CDC ACM"
+    description: "CDC ACM USB转串口设备"
+    vendor_id: ""  # 空表示匹配所有厂商
+    driver_pattern: "cdc_acm"
+    priority: 70
+    chip_type: "CDC_ACM"
+
+# 通用规则（当无法匹配具体厂商时使用）
+generic_rules:
+  - name: "Generic USB Serial"
+    description: "通用USB转串口设备"
+    driver_pattern: "usbserial"
+    priority: 50
+    chip_type: "Generic_USB_Serial"
+  
+  - name: "Unknown Device"
+    description: "未知USB转串口设备"
+    priority: 30
+    chip_type: "Unknown"
+
+# 设备匹配规则（用于智能选择）
+device_rules:
+  # 优先选择规则
+  - name: "FTDI_Priority"
+    description: "FTDI设备优先"
+    vendor_id: "0403"
+    priority: 20
+    enabled: true
+  
+  - name: "CP210x_Priority"
+    description: "CP210x设备优先"
+    vendor_id: "10c4"
+    priority: 15
+    enabled: true
+  
+  - name: "CH34x_Priority"
+    description: "CH34x设备优先"
+    vendor_id: "1a86"
+    priority: 10
+    enabled: true
+  
+  - name: "CDC_ACM_Priority"
+    description: "CDC ACM设备优先"
+    driver_pattern: "cdc_acm"
+    priority: 5
+    enabled: true
+
+# 设备过滤规则（排除某些设备）
+device_filters:
+  - name: "Exclude_Bluetooth"
+    description: "排除蓝牙设备"
+    driver_pattern: "bluetooth"
+    enabled: true
+  
+  - name: "Exclude_Modem"
+    description: "排除调制解调器"
+    driver_pattern: "modem"
+    enabled: true

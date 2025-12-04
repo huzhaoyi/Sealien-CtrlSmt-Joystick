@@ -1,0 +1,55 @@
+# 调试配置文件
+# 通过此文件控制各模块的调试输出，无需重新编译
+# 如果此文件不存在，将使用默认的调试配置
+
+# Core模块调试开关
+core: true
+config: true
+
+# Modbus分级调试开关
+modbus_comm: true          # Modbus基础通信调试（连接、错误等）
+modbus_input_reg: false     # Modbus输入寄存器调试（模拟量输入）
+modbus_holding_reg: false  # Modbus保持寄存器调试（模拟量输出）
+modbus_coil: false         # Modbus线圈调试（数字输出）
+modbus_discrete_input: false # Modbus离散输入调试（数字输入）
+modbus_voltage_conv: false  # Modbus电压转换调试（电压/电流值显示）
+modbus_write: false         # Modbus写入操作调试
+modbus_hex_frame: false     # Modbus十六进制数据帧打印
+
+# Joystick模块调试开关
+joystick: true
+
+# ROS2分级调试开关
+ros2_comm: true            # ROS2基础通信调试（连接、错误等）
+ros2_axes: false           # ROS2轴数据调试（Axes数据打印）
+ros2_buttons: false        # ROS2按钮数据调试（Buttons数据打印）
+ros2_twist: false          # ROS2 Twist消息调试（Twist数据打印）
+ros2_status: false         # ROS2状态消息调试（Status数据打印）
+ros2_publish: false        # ROS2消息发布调试（发布操作日志）
+ros2_subscribe: false      # ROS2订阅调试（订阅操作日志）
+
+# Utils模块调试开关
+utils: true
+
+# Mapping模块调试开关
+mapping: true
+
+# UInput模块调试开关
+uinput: false
+
+# 阀控板模块调试开关
+valve_control: true              # 阀控板基础调试（连接、错误等）
+valve_control_status: true       # 阀控板状态读取调试（总开关）
+valve_control_status_registers: true  # 所有寄存器原始数据（地址0-63）
+valve_control_status_key: false   # 关键寄存器（累加器、心跳、阀状态寄存器）
+valve_control_status_current: false  # 阀电流值（地址2-21，40个阀）
+valve_control_status_sensor: false  # 传感器数据（地址22-45，24个传感器）
+valve_control_status_encoder: false  # 编码器数据（地址46-49）
+valve_control_status_proximity: false  # 接近开关（地址50）
+valve_control_status_env: false   # 湿度/温度/板载传感器（地址51-55）
+valve_control_status_sensor_status: false  # 传感器状态（地址61-62）
+valve_control_status_valve_status: false   # 阀状态（地址56-60，40个阀）
+valve_control_write: true        # 阀控板写入操作调试（电流设定、心跳等）
+valve_control_joystick: true      # 阀控板摇杆消息调试（接收到的摇杆值）
+
+

@@ -1,0 +1,79 @@
+joystick_node:
+  ros__parameters:
+    # 配置文件路径
+    config_file: "config/AMSAMOTION_IO8R.yaml"
+    
+    # 发布频率设置
+    publish_rate: 50.0
+    
+    # 功能开关
+    enable_modbus: true      # 是否启用Modbus功能
+    enable_uinput: false     # 是否启用uinput虚拟设备
+    
+    # 话题名称配置
+    joystick_topic: "/sealien_joystick"           # 手柄数据话题
+    twist_topic: "/sealien_joystick/cmd_vel"      # 速度命令话题
+    device_status_topic: "/sealien_joystick/device_status" # 设备状态话题
+    
+    # 手柄检测器配置
+    joystick_detector:
+      enabled: true
+      enable_hotplug: true
+      scan_interval_ms: 1000
+      
+      device_filter:
+        gamepad_only: false
+        vendor_whitelist: []
+        vendor_blacklist: []
+        product_whitelist: []
+        product_blacklist: []
+      
+      event_handling:
+        log_axis_events: true
+        log_button_events: true
+        log_connection_events: true
+        axis_threshold: 100
+        button_debounce_ms: 10
+    
+    # 轴映射配置（用于Twist消息）
+    # 不同USB手柄轴顺序可能不同，请按设备调整索引
+    axis_mapping:
+      linear_x: 1    # 轴1 -> 线速度X（例如左摇杆Y轴）
+      linear_y: 0    # 轴0 -> 线速度Y（例如左摇杆X轴）
+      linear_z: -1   # 轴-1 -> 线速度Z（禁用）
+      angular_x: -1  # 轴-1 -> 角速度X（禁用）
+      angular_y: -1  # 轴-1 -> 角速度Y（禁用）
+      angular_z: 0   # 轴0 -> 角速度Z（例如左摇杆X轴）
+    
+    # 按钮映射配置
+    # 将未使用的功能设置为-1即可禁用
+    button_mapping:
+      emergency_stop: 0      # 按钮0 -> 紧急停止（按下即停，松开恢复）
+      mode_switch: 1         # 按钮1 -> 模式切换（边沿触发，开/关慢速）
+      speed_boost: 2         # 按钮2 -> 速度提升（按下有效）
+
+    # 速度缩放（与按钮功能配合使用）
+    speed_scaling:
+      slow_factor: 0.5       # 慢速模式倍率（0.0-1.0）
+      boost_factor: 1.5      # 加速倍率（>=1.0）
+    
+    # 数据过滤配置
+    data_filtering:
+      enable_deadzone: true
+      deadzone_threshold: 0.05
+      enable_smoothing: true
+      smoothing_factor: 0.3
+      
+      # 注意：USB摇杆死区配置通过宏定义管理，无需在此配置
+      
+    # 发布配置
+    publishing:
+      enable_twist: true     # 是否发布Twist消息
+      enable_joy: true       # 是否发布Joy消息
+      enable_status: true    # 是否发布状态消息
+      
+    # 调试配置
+    debug:
+      verbose_logging: false
+      show_raw_data: false
+      log_event_details: false

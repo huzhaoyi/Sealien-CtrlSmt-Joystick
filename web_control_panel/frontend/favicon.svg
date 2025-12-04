@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 白色主色 + 蓝色配色 -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f1f5f9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e2e8f0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="32" height="32" fill="url(#bgGrad)" rx="8" stroke="#cbd5e1" stroke-width="0.5"/>
+  
+  <!-- 下面两个角落的装饰圆点 -->
+  <circle cx="8" cy="24" r="2" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="24" cy="24" r="2" fill="#3b82f6" opacity="0.7"/>
+  
+  <!-- Sealien 公司名称 -->
+  <text x="16" y="12" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="6" font-weight="600" 
+        fill="url(#textGrad)" text-anchor="middle" opacity="0.9">SEALIEN</text>
+  
+  
+  
+  
+  <!-- 海洋波浪 - 蓝色设计 -->
+  <path d="M2 20 Q6 16 10 20 T18 20 T26 20 T30 20" stroke="#3b82f6" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <path d="M0 24 Q4 20 8 24 T16 24 T24 24 T28 24" stroke="#3b82f6" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M4 28 Q8 24 12 28 T20 28 T28 28" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+  
+  <!-- 海浪装饰点 -->
+  <circle cx="6" cy="18" r="0.8" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="14" cy="18" r="0.8" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="22" cy="18" r="0.8" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="10" cy="22" r="0.6" fill="#3b82f6" opacity="0.6"/>
+  <circle cx="18" cy="22" r="0.6" fill="#3b82f6" opacity="0.6"/>
+  <circle cx="26" cy="22" r="0.6" fill="#3b82f6" opacity="0.6"/>
+</svg>

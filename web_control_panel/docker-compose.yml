@@ -1,0 +1,46 @@
+# Sealien Web控制面板 - Docker Compose配置
+version: '3.8'
+
+services:
+  web-panel:
+    build: .
+    container_name: sealien-web-panel
+    ports:
+      - "8080:8080"  # HTTP服务器
+      - "8765:8765"  # WebSocket服务器
+    volumes:
+      - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - ROS_DISTRO=humble
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - sealien-network
+    depends_on:
+      - ros2-bridge
+
+  ros2-bridge:
+    image: ros:humble-desktop
+    container_name: sealien-ros2-bridge
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        ros2 run ros1_bridge dynamic_bridge --bridge-all-topics
+      "
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - DISPLAY=${DISPLAY}
+      - ROS_DISTRO=humble
+    networks:
+      - sealien-network
+    restart: unless-stopped
+
+networks:
+  sealien-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

@@ -1,0 +1,62 @@
+# Moxa ioLogik R1240 配置文件
+# 设备型号：ioLogik R1240 - 8路模拟量输入模块
+# 协议：Modbus RTU
+# 参考手册：ioLogik R1200 Series User's Manual
+
+# 系统配置
+enable_modbus: true   # 启用Modbus功能
+
+# Modbus串口配置
+# 支持智能串口检测：设置为 "auto" 或 "smart" 将自动检测最佳串口设备
+# 支持多种厂商芯片：FTDI/CP210x/CH34x/CDC ACM/PL2303等
+serial_port: auto   # 智能检测模式，自动选择最佳串口设备
+# serial_port: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_BG024F00-if00-port0   # 手动指定串口（符号链接）
+# serial_port: /dev/ttyUSB0   # 手动指定串口（设备节点）
+
+# 通信参数（根据手册默认值：9600 baud, n, 8, 1）
+baud: 9600          # 默认波特率：9600（支持范围：1200-921600）
+parity: N           # 校验位：N=无校验, E=偶校验, O=奇校验（默认：None）
+data_bits: 8        # 数据位：8
+stop_bits: 1        # 停止位：1或2（默认：1）
+slave_id: 1         # 从站ID：1-99（通过设备背面的拨码开关设置）
+
+# 轮询配置
+poll_hz: 25         # 轮询频率 (Hz)，降低频率可减少通信压力
+bus_error_threshold: 2  # 总线错误阈值 (秒)，增加阈值可提高稳定性
+
+# 电压映射参数配置
+# 根据手册，R1240支持：
+# - 电压模式：0-10 VDC
+# - 电流模式：0-20 mA, 4-20 mA (burnout模式)
+# 分辨率：16位 (0-65535)
+voltage_mapping:
+  min_voltage: 0.5    # 最小电压值 (V)
+  mid_voltage: 2.5    # 中间电压值 (V) 
+  max_voltage: 4.5    # 最大电压值 (V)
+
+# 连续量 → 轴（[-32767, 32767]）
+# 使用engineeringValue（32位浮点数），每个通道占2个word，配置时使用高字地址
+# 地址映射：AI-00=800, AI-01=802, AI-02=804, AI-03=806, AI-04=808, AI-05=810, AI-06=812, AI-07=814
+# engineeringValue范围：0-10.0V (电压模式) 或 0-20.0mA/4-20.0mA (电流模式)
+
+axes:
+  - {code: ABS_X,  source: {type: "input_register", addr: 800}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 0}  # AI-00 engineeringValue (0x0320 high) - 第1路模拟量输入 -> Joy.axes[0] 左摇杆X轴
+  - {code: ABS_Y,  source: {type: "input_register", addr: 802}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 1}  # AI-01 engineeringValue (0x0322 high) - 第2路模拟量输入 -> Joy.axes[1] 左摇杆Y轴
+  - {code: ABS_Z,  source: {type: "input_register", addr: 804}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 2}  # AI-02 engineeringValue (0x0324 high) - 第3路模拟量输入 -> Joy.axes[2] 右摇杆X轴
+  - {code: ABS_RX, source: {type: "input_register", addr: 806}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 3}  # AI-03 engineeringValue (0x0326 high) - 第4路模拟量输入 -> Joy.axes[3] 右摇杆Y轴
+  - {code: ABS_RY, source: {type: "input_register", addr: 808}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 4}  # AI-04 engineeringValue (0x0328 high) - 第5路模拟量输入 -> Joy.axes[4] 左触发器
+  - {code: ABS_RZ, source: {type: "input_register", addr: 810}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 5}  # AI-05 engineeringValue (0x032A high) - 第6路模拟量输入 -> Joy.axes[5] 右触发器
+  - {code: ABS_THROTTLE, source: {type: "input_register", addr: 812}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 6}  # AI-06 engineeringValue (0x032C high) - 第7路模拟量输入 -> Joy.axes[6] 油门轴
+  - {code: ABS_RUDDER,   source: {type: "input_register", addr: 814}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 7}  # AI-07 engineeringValue (0x032E high) - 第8路模拟量输入 -> Joy.axes[7] 方向舵轴
+
+# Bit → 按钮（数字量输入）
+# 注意：R1240只有模拟量输入，没有数字量输入
+# 如需使用数字量输入，请使用R1210（16路DI）或R1212（8路DI+8路DIO）
+buttons:
+  # R1240无数字量输入通道
+  # 如需配置按钮，请使用其他型号如R1210或R1212
+
+# 数字量输出配置说明
+# 注意：R1240只有模拟量输入，没有数字量输出
+# 如需使用数字量输出，请使用R1212（8路DIO）或R1214（6路继电器）
+

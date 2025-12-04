@@ -1,0 +1,22 @@
+# /etc/systemd/system/sealien-ctrlsmt-joystick.service
+
+
+[Unit]
+Description=Sealien-CtrlSmt-Joystick: Modbus → Virtual Joystick (cfg)
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sealien-ctrlsmt-joystick /etc/sealien-ctrlsmt-joystick.yaml
+Restart=on-failure
+# User=<your-user>  # 如非 root 运行，确保该用户在 dialout、input 组
+
+[Install]
+WantedBy=multi-user.target
+
+
+#启用
+#sudo cp build/sealien-ctrlsmt-joystick /usr/local/bin/
+#sudo cp config/sealien-ctrlsmt-joystick.yaml /etc/sealien-ctrlsmt-joystick.yaml
+#sudo systemctl daemon-reload
+#sudo systemctl enable --now sealien-ctrlsmt-joystick

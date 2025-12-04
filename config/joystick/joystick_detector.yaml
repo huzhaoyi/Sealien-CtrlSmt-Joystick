@@ -1,0 +1,87 @@
+# USB物理手柄检测器配置文件
+# 用于配置手柄检测器的行为参数
+
+# 基本配置
+joystick_detector:
+  # 是否启用手柄检测器
+  enabled: true
+  
+  # 是否启用热插拔检测
+  enable_hotplug: true
+  
+  # 扫描间隔（毫秒）
+  scan_interval_ms: 1000
+  
+  # 设备过滤配置
+  device_filter:
+    # 是否只检测游戏手柄（排除其他输入设备）
+    gamepad_only: false
+    
+    # 是否只检测摇杆设备
+    joystick_only: false
+    
+    # 厂商ID白名单（空列表表示接受所有厂商）
+    vendor_whitelist: []
+    
+    # 厂商ID黑名单
+    vendor_blacklist: []
+    
+    # 产品ID白名单（空列表表示接受所有产品）
+    product_whitelist: []
+    
+    # 产品ID黑名单
+    product_blacklist: []
+  
+  # 事件处理配置
+  event_handling:
+    # 是否记录轴事件
+    log_axis_events: true
+    
+    # 是否记录按钮事件
+    log_button_events: true
+    
+    # 是否记录连接/断开事件
+    log_connection_events: true
+    
+    # 轴事件阈值（避免记录微小变化）
+    axis_threshold: 100
+    
+    # 按钮去抖时间（毫秒）
+    button_debounce_ms: 10
+  
+  # 设备信息配置
+  device_info:
+    # 是否读取详细设备信息
+    read_detailed_info: true
+    
+    # 是否从/sys/class/input读取额外信息
+    read_sys_info: true
+    
+    # 设备名称最大长度
+    max_name_length: 256
+  
+  # 调试配置
+  debug:
+    # 是否启用详细日志
+    verbose_logging: false
+    
+    # 是否显示设备扫描过程
+    show_scan_process: false
+    
+    # 是否显示事件详情
+    show_event_details: false
+
+# 示例配置：只接受特定厂商的手柄
+# joystick_detector:
+#   enabled: true
+#   enable_hotplug: true
+#   scan_interval_ms: 500
+#   device_filter:
+#     gamepad_only: true
+#     vendor_whitelist: [0x045e, 0x054c, 0x046d]  # Microsoft, Sony, Logitech
+#     product_blacklist: []
+#   event_handling:
+#     log_axis_events: true
+#     log_button_events: true
+#     axis_threshold: 50
+#     button_debounce_ms: 5

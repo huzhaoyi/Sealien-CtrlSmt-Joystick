@@ -1,0 +1,450 @@
+# 手柄映射配置文件
+# 解决不同USB手柄（如XBOX、PS、罗技等）的轴/按钮索引差异问题
+# 实现用户自定义输入（物理手柄的轴/按钮）与输出（ROS2话题/Twist控制）的映射关系
+
+joystick_mappings:
+  # ============================================================================
+  # Xbox One 手柄默认映射
+  # ============================================================================
+  - vendor_id: 0x045E
+    product_id: 0x02D1
+    device_name: "Xbox One Controller"
+    config_name: "Xbox_One_Default"
+    default_deadzone: 0.12
+    default_scale_factor: 1.0
+    enable_auto_detection: true
+    
+    axis_mappings:
+      # 左摇杆
+      - physical_axis_index: 0
+        mapping_type: 0  # LINEAR_X
+        custom_name: "left_stick_x"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 1
+        mapping_type: 1  # LINEAR_Y
+        custom_name: "left_stick_y"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 左触发器
+      - physical_axis_index: 2
+        mapping_type: 5  # CUSTOM
+        custom_name: "left_trigger"
+        invert: false
+        deadzone: 0.05
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 右摇杆
+      - physical_axis_index: 3
+        mapping_type: 5  # ANGULAR_Z
+        custom_name: "right_stick_x"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 4
+        mapping_type: 4  # ANGULAR_Y
+        custom_name: "right_stick_y"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 右触发器
+      - physical_axis_index: 5
+        mapping_type: 5  # CUSTOM
+        custom_name: "right_trigger"
+        invert: false
+        deadzone: 0.05
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+    button_mappings:
+      # 主要按钮
+      - physical_button_index: 0
+        function_type: 0  # EMERGENCY_STOP
+        custom_name: "button_a"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 1
+        function_type: 1  # MODE_SWITCH
+        custom_name: "button_b"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 2
+        function_type: 2  # SPEED_BOOST
+        custom_name: "button_x"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 3
+        function_type: 3  # SPEED_SLOW
+        custom_name: "button_y"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      # 肩部按钮
+      - physical_button_index: 4
+        function_type: 4  # CUSTOM
+        custom_name: "left_bumper"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 5
+        function_type: 4  # CUSTOM
+        custom_name: "right_bumper"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+
+  # ============================================================================
+  # PlayStation 4 手柄默认映射
+  # ============================================================================
+  - vendor_id: 0x054C
+    product_id: 0x05C4
+    device_name: "PS4 Controller"
+    config_name: "PS4_Default"
+    default_deadzone: 0.12
+    default_scale_factor: 1.0
+    enable_auto_detection: true
+    
+    axis_mappings:
+      # 左摇杆
+      - physical_axis_index: 0
+        mapping_type: 0  # LINEAR_X
+        custom_name: "left_stick_x"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 1
+        mapping_type: 1  # LINEAR_Y
+        custom_name: "left_stick_y"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # L2 触发器
+      - physical_axis_index: 2
+        mapping_type: 5  # CUSTOM
+        custom_name: "l2_trigger"
+        invert: false
+        deadzone: 0.05
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 右摇杆
+      - physical_axis_index: 3
+        mapping_type: 5  # ANGULAR_Z
+        custom_name: "right_stick_x"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 4
+        mapping_type: 4  # ANGULAR_Y
+        custom_name: "right_stick_y"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # R2 触发器
+      - physical_axis_index: 5
+        mapping_type: 5  # CUSTOM
+        custom_name: "r2_trigger"
+        invert: false
+        deadzone: 0.05
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+    button_mappings:
+      # 主要按钮
+      - physical_button_index: 0
+        function_type: 0  # EMERGENCY_STOP
+        custom_name: "button_x"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 1
+        function_type: 1  # MODE_SWITCH
+        custom_name: "button_circle"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 2
+        function_type: 2  # SPEED_BOOST
+        custom_name: "button_square"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 3
+        function_type: 3  # SPEED_SLOW
+        custom_name: "button_triangle"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      # 肩部按钮
+      - physical_button_index: 4
+        function_type: 4  # CUSTOM
+        custom_name: "l1_button"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 5
+        function_type: 4  # CUSTOM
+        custom_name: "r1_button"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+
+  # ============================================================================
+  # Logitech F310 手柄默认映射
+  # ============================================================================
+  - vendor_id: 0x046D
+    product_id: 0xC21D
+    device_name: "Logitech F310"
+    config_name: "Logitech_F310_Default"
+    default_deadzone: 0.12
+    default_scale_factor: 1.0
+    enable_auto_detection: true
+    
+    axis_mappings:
+      # 左摇杆
+      - physical_axis_index: 0
+        mapping_type: 0  # LINEAR_X
+        custom_name: "left_stick_x"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 1
+        mapping_type: 1  # LINEAR_Y
+        custom_name: "left_stick_y"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 左触发器
+      - physical_axis_index: 2
+        mapping_type: 5  # CUSTOM
+        custom_name: "left_trigger"
+        invert: false
+        deadzone: 0.05
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 右摇杆
+      - physical_axis_index: 3
+        mapping_type: 5  # ANGULAR_Z
+        custom_name: "right_stick_x"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 4
+        mapping_type: 4  # ANGULAR_Y
+        custom_name: "right_stick_y"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      # 右触发器
+      - physical_axis_index: 5
+        mapping_type: 5  # CUSTOM
+        custom_name: "right_trigger"
+        invert: false
+        deadzone: 0.05
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+    button_mappings:
+      # 主要按钮
+      - physical_button_index: 0
+        function_type: 0  # EMERGENCY_STOP
+        custom_name: "button_a"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 1
+        function_type: 1  # MODE_SWITCH
+        custom_name: "button_b"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 2
+        function_type: 2  # SPEED_BOOST
+        custom_name: "button_x"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 3
+        function_type: 3  # SPEED_SLOW
+        custom_name: "button_y"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      # 肩部按钮
+      - physical_button_index: 4
+        function_type: 4  # CUSTOM
+        custom_name: "left_bumper"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 5
+        function_type: 4  # CUSTOM
+        custom_name: "right_bumper"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+
+  # ============================================================================
+  # 通用手柄默认映射（适用于未知手柄）
+  # ============================================================================
+  - vendor_id: 0x0000
+    product_id: 0x0000
+    device_name: "Generic Gamepad"
+    config_name: "Generic_Default"
+    default_deadzone: 0.12
+    default_scale_factor: 1.0
+    enable_auto_detection: true
+    
+    axis_mappings:
+      # 假设前4个轴为左右摇杆
+      - physical_axis_index: 0
+        mapping_type: 0  # LINEAR_X
+        custom_name: "axis_0"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 1
+        mapping_type: 1  # LINEAR_Y
+        custom_name: "axis_1"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 2
+        mapping_type: 5  # ANGULAR_Z
+        custom_name: "axis_2"
+        invert: false
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+      - physical_axis_index: 3
+        mapping_type: 4  # ANGULAR_Y
+        custom_name: "axis_3"
+        invert: true
+        deadzone: 0.12
+        scale_factor: 1.0
+        min_value: -1.0
+        max_value: 1.0
+        enabled: true
+        
+    button_mappings:
+      # 前4个按钮
+      - physical_button_index: 0
+        function_type: 0  # EMERGENCY_STOP
+        custom_name: "button_0"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 1
+        function_type: 1  # MODE_SWITCH
+        custom_name: "button_1"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 2
+        function_type: 2  # SPEED_BOOST
+        custom_name: "button_2"
+        active_high: true
+        debounce_ms: 10
+        enabled: true
+        
+      - physical_button_index: 3
+        function_type: 3  # SPEED_SLOW
+        custom_name: "button_3"
+        active_high: true
+        debounce_ms: 10
+        enabled: true

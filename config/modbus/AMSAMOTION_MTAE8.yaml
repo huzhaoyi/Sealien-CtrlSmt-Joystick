@@ -1,0 +1,87 @@
+# 系统配置
+enable_modbus: true   # 启用Modbus功能
+
+# Modbus串口配置
+# 支持智能串口检测：设置为 "auto" 或 "smart" 将自动检测最佳串口设备
+# 支持多种厂商芯片：FTDI/CP210x/CH34x/CDC ACM/PL2303等
+#serial_port: auto   # 智能检测模式，自动选择最佳串口设备
+serial_port: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_BG038EVP-if00-port0   # 手动指定串口（符号链接）ls -l /dev/serial/by-id/
+#serial_port: /dev/ttyUSB1   # 手动指定串口（设备节点）
+baud: 115200
+parity: N
+data_bits: 8
+stop_bits: 1
+# 支持单个从站或多个从站轮询
+# 单个从站：slave_id: 1
+# 多个从站：slave_id: [1, 2]  # 轮询从站1和从站2
+#slave_id: [1, 2]  # 多从站模式：轮询从站1和从站2
+slave_id: 2
+poll_hz: 20  # 降低轮询频率，减少通信压力
+bus_error_threshold: 2  # 增加错误判定时间阈值，提高稳定性
+
+# 电压映射参数配置
+voltage_mapping:
+  min_voltage: 0.5    # 最小电压值 (V)
+  mid_voltage: 2.5    # 中间电压值 (V) 
+  max_voltage: 4.5    # 最大电压值 (V)
+  modbus_max_value: 32768  # Modbus寄存器最大值
+
+# ============================================
+# 阀控板配置
+# ============================================
+# 是否启用阀控板功能
+enable_valve_control: true   # 设置为 true 启用阀控板功能
+
+# 阀控板配置文件路径（可选）
+# 如果指定了此路径，将从该文件加载阀控板配置（valve_control段）
+# 如果为空，则使用当前配置文件的 valve_control 段（如果存在）
+valve_control_config_file: config/modbus/VALVE_CONTROL_BOARD.yaml
+
+# 连续量 → 轴（[-32767, 32767]）
+# 根据AMSAMOTION_MTAE8端子定义配置8路模拟量电压输入通道
+# 电压映射将通过代码动态计算，无需在配置中指定raw_min/raw_max
+
+#lpf_alpha = 1.0：不开滤波（完全不过滤）
+#lpf_alpha = 0.0：完全滤波（输出完全平滑，不响应变化）
+#lpf_alpha = 0.5：中等滤波（50%的原始信号 + 50%的滤波信号）
+axes:
+  # 多从站配置说明：
+  # - 前8个轴对应从站1（slave_id: 1），ros2_joy_index: 0-7
+  # - 后8个轴对应从站2（slave_id: 2），ros2_joy_index: 8-15
+  # 从站1的8路模拟量电压输入通道（0~10V电压输入）
+  #- {code: ABS_X,  source: {type: "input_register", addr: 0}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 0}  
+  # 从站1 V1 - 第1路模拟量 0~10V 电压输入 -> Joy.axes[0] 左摇杆X轴
+  #- {code: ABS_Y,  source: {type: "input_register", addr: 1}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 1}  
+  # 从站1 V2 - 第2路模拟量 0~10V 电压输入 -> Joy.axes[1] 左摇杆Y轴
+  #- {code: ABS_Z,  source: {type: "input_register", addr: 2}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 2}  
+  # 从站1 V3 - 第3路模拟量 0~10V 电压输入 -> Joy.axes[2] 右摇杆X轴
+  #- {code: ABS_RX, source: {type: "input_register", addr: 3}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 3}  
+  # 从站1 V4 - 第4路模拟量 0~10V 电压输入 -> Joy.axes[3] 右摇杆Y轴
+  #- {code: ABS_RY, source: {type: "input_register", addr: 4}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 4}  
+  # 从站1 V5 - 第5路模拟量 0~10V 电压输入 -> Joy.axes[4] 左触发器
+  #- {code: ABS_RZ, source: {type: "input_register", addr: 5}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 5}  
+  # 从站1 V6 - 第6路模拟量 0~10V 电压输入 -> Joy.axes[5] 右触发器
+  #- {code: ABS_THROTTLE, source: {type: "input_register", addr: 6}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 6}  
+  # 从站1 V7 - 第7路模拟量 0~10V 电压输入 -> Joy.axes[6] 油门轴
+  #- {code: ABS_RUDDER,   source: {type: "input_register", addr: 7}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 7}  
+  # 从站1 V8 - 第8路模拟量 0~10V 电压输入 -> Joy.axes[7] 方向舵轴
+
+  # 从站2的8路模拟量电压输入通道（0~10V电压输入）
+  - {code: ABS_X,  source: {type: "input_register", addr: 3}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 7}  
+  # 从站2 V1 - 第1路模拟量 0~10V 电压输入 -> Joy.axes[8] 左摇杆X轴
+  - {code: ABS_Y,  source: {type: "input_register", addr: 2}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 8}  
+  # 从站2 V2 - 第2路模拟量 0~10V 电压输入 -> Joy.axes[9] 左摇杆Y轴
+  - {code: ABS_Z,  source: {type: "input_register", addr: 0}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 9}  
+  # 从站2 V3 - 第3路模拟量 0~10V 电压输入 -> Joy.axes[10] 右摇杆X轴
+  - {code: ABS_RX, source: {type: "input_register", addr: 6}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 10}  
+  # 从站2 V4 - 第4路模拟量 0~10V 电压输入 -> Joy.axes[11] 右摇杆Y轴
+  - {code: ABS_RY, source: {type: "input_register", addr: 4}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 11}  
+  # 从站2 V5 - 第5路模拟量 0~10V 电压输入 -> Joy.axes[12] 左触发器
+  - {code: ABS_RZ, source: {type: "input_register", addr: 1}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 12}  
+  # 从站2 V6 - 第6路模拟量 0~10V 电压输入 -> Joy.axes[13] 右触发器
+  - {code: ABS_THROTTLE, source: {type: "input_register", addr: 5}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 13}  
+  # 从站2 V7 - 第7路模拟量 0~10V 电压输入 -> Joy.axes[14] 油门轴
+  #- {code: ABS_RUDDER,   source: {type: "input_register", addr: 7}, deadzone: 0.12, lpf_alpha: 1.0, invert: false, swap_endian: false, ros2_joy_index: 15}  
+  # 从站2 V8 - 第8路模拟量 0~10V 电压输入 -> Joy.axes[15] 方向舵轴
+
+

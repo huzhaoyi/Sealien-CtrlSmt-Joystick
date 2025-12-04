@@ -1,0 +1,48 @@
+# Sealien Web控制面板 - 配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
+
+# WebSocket服务器配置
+websocket:
+  host: "localhost"
+  port: 8765
+  max_connections: 100
+
+# HTTP服务器配置
+http:
+  host: "localhost"
+  port: 8080
+  static_path: "./frontend"
+
+# ROS2配置
+ros2:
+  node_name: "websocket_ros2_subscriber"
+  topics:
+    joystick: "/joystick"
+    cmd_vel: "/cmd_vel"
+    device_status: "/device_status"
+  
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/web_panel.log"
+
+# 数据更新频率 (毫秒)
+update_interval:
+  joystick: 100
+  modbus: 100
+  status: 1000
+  logs: 2000
+
+# Modbus配置
+modbus:
+  enabled: true
+  device_id: 1
+  channels: 8
+
+# 安全配置
+security:
+  enable_cors: true
+  allowed_origins: ["http://localhost:8080"]
+  enable_auth: false
+  api_key: "your-secret-key-here"

@@ -17,7 +17,7 @@
 #include "config/smart_config.h"
 #include "communication/modbus/modbus_client.h"
 #include "input/uinput_device.h"
-#include "communication/modbus/modbus_data_processor.h"
+#include "communication/modbus/acquisition_card_processor.h"
 #include "communication/modbus/valve_control_processor.h"
 #include "communication/joystick/joystick_manager.h"
 #include "detection/usb_serial_detector.h"
@@ -121,10 +121,10 @@ private:
     bool initializeUInput();
 
     /**
-     * @brief 初始化Modbus数据处理器
+     * @brief 初始化采集卡数据处理器
      * @return 初始化成功返回true
      */
-    bool initializeModbusProcessor();
+    bool initializeAcquisitionCardProcessor();
 
     /**
      * @brief 初始化阀控板处理器
@@ -200,7 +200,7 @@ private:
     std::unique_ptr<SmartConfigManager> smart_config_;   ///< 智能配置管理器
     std::unique_ptr<ModbusClient> modbus_client_;     ///< Modbus客户端
     std::unique_ptr<UInputDevice> uinput_device_;     ///< uinput设备
-    std::unique_ptr<ModbusDataProcessor> modbus_processor_; ///< Modbus数据处理器
+    std::unique_ptr<AcquisitionCardProcessor> acquisition_card_processor_; ///< 采集卡数据处理器
     std::unique_ptr<ValveControlProcessor> valve_control_processor_; ///< 阀控板处理器
     std::unique_ptr<JoystickManager> joystick_manager_; ///< 手柄管理器
     std::unique_ptr<USBSerialDetector> usb_serial_detector_; ///< USB转串口设备检测器
@@ -222,7 +222,7 @@ private:
     std::string config_path_;                          ///< 配置文件路径
     double poll_hz_{10.0};                            ///< 轮询频率
     std::string valve_control_port_;                   ///< 阀控板串口路径
-    std::string main_modbus_serial_number_;           ///< 主 Modbus 设备 USB 序列号（用于重连识别）
+    std::string acquisition_card_serial_number_;       ///< 采集卡 USB 序列号（用于重连识别）
     std::string valve_control_serial_number_;          ///< 阀控板设备 USB 序列号（用于重连识别）
 
     /**

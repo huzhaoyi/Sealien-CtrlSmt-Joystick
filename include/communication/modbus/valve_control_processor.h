@@ -58,10 +58,10 @@ public:
      * @param parity 校验位（N-无校验，E-偶校验，O-奇校验）
      * @param data_bits 数据位
      * @param stop_bits 停止位
-     * @param slave_id 从站ID
+     * @param slave_ids 从站ID列表（支持多从站轮询）
      * @param poll_interval_ms 轮询间隔（毫秒），默认100ms
      */
-    ValveControlProcessor(const std::string& port, int baud, char parity, int data_bits, int stop_bits, int slave_id, int poll_interval_ms = 100);
+    ValveControlProcessor(const std::string& port, int baud, char parity, int data_bits, int stop_bits, const std::vector<int>& slave_ids, int poll_interval_ms = 100);
 
     /**
      * @brief 析构函数
@@ -131,6 +131,13 @@ public:
      */
     void close();
 
+    /**
+     * @brief 更新串口端口（用于USB设备热插拔后端口改变）
+     * @param new_port 新的串口设备路径
+     * @return 更新成功返回true
+     */
+    bool updatePort(const std::string& new_port);
+
 #ifdef ENABLE_ROS2
     /**
      * @brief 设置ROS2节点（用于订阅摇杆话题）
@@ -148,8 +155,16 @@ public:
 private:
     std::unique_ptr<ModbusClient> modbus_client_;  ///< Modbus客户端（独立实例）
     int poll_interval_ms_;              ///< 轮询间隔（毫秒）
+    std::vector<int> slave_ids_;        ///< 从站ID列表（支持多从站轮询）
     ValveControlStatus status_;         ///< 阀控板状态
     mutable std::mutex status_mutex_;   ///< 状态互斥锁
+    
+    // 连接参数（用于端口更新时重新创建 ModbusClient）
+    std::string port_;                  ///< 串口设备路径
+    int baud_;                          ///< 波特率
+    char parity_;                       ///< 校验位
+    int data_bits_;                     ///< 数据位
+    int stop_bits_;                     ///< 停止位
     
     // 阀电流设定值缓存（避免重复写入相同值）
     std::vector<int16_t> last_valve_currents_; ///< 上次写入的阀电流值

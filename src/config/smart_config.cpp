@@ -37,21 +37,21 @@ bool SmartConfigManager::loadConfig(const std::string& config_path, bool enable_
         config_ = std::make_unique<Config>(ConfigLoader::Load(config_path));
         original_serial_port_ = config_->getSerialPort();
         
-        DEBUG_CORE_LOG("Configuration loaded successfully from: " << config_path);
-        DEBUG_CORE_LOG("Original serial port: " << original_serial_port_);
+        DEBUG_CORE_LOG("配置已成功从以下路径加载: " << config_path);
+        DEBUG_CORE_LOG("原始串口: " << original_serial_port_);
         
         // 启用智能检测
         smart_detection_enabled_ = enable_smart_detection;
         if (enable_smart_detection) {
             if (!initializeDetector()) {
-                DEBUG_CORE_WARNING("Failed to initialize smart serial detector, using static configuration");
+                DEBUG_CORE_WARNING("智能串口检测器初始化失败，使用静态配置");
                 smart_detection_enabled_ = false;
             } else {
-                DEBUG_CORE_LOG("Smart serial detection enabled");
+                DEBUG_CORE_LOG("智能串口检测已启用");
                 
                 // 执行初始检测
                 int device_count = detectSerialDevices();
-                DEBUG_CORE_LOG("Detected " << device_count << " serial devices");
+                DEBUG_CORE_LOG("检测到 " << device_count << " 个串口设备");
                 
                 // 如果配置的是符号链接，先解析符号链接找到实际设备
                 std::string preferred_device = original_serial_port_;
@@ -61,7 +61,7 @@ bool SmartConfigManager::loadConfig(const std::string& config_path, bool enable_
                     char resolved_path[PATH_MAX];
                     if (realpath(original_serial_port_.c_str(), resolved_path) != nullptr) {
                         preferred_device = std::string(resolved_path);
-                        DEBUG_CORE_LOG("Resolved symbolic link: " << original_serial_port_ << " -> " << preferred_device);
+                        DEBUG_CORE_LOG("解析符号链接: " << original_serial_port_ << " -> " << preferred_device);
                     }
                 }
                 
@@ -73,16 +73,16 @@ bool SmartConfigManager::loadConfig(const std::string& config_path, bool enable_
                     if (best_device == preferred_device || best_device == original_serial_port_) {
                         // 使用首选设备
                         if (best_device != config_->getSerialPort()) {
-                            DEBUG_CORE_LOG("Using preferred device: " << best_device << " (from config: " << original_serial_port_ << ")");
+                            DEBUG_CORE_LOG("使用首选设备: " << best_device << " (来自配置: " << original_serial_port_ << ")");
                             updateSerialPort(best_device);
                         }
                     } else {
                         // 首选设备不可用，使用智能检测选择的设备
-                        DEBUG_CORE_LOG("Auto-selected best device: " << best_device << " (preferred: " << preferred_device << ", original: " << original_serial_port_ << ")");
+                        DEBUG_CORE_LOG("自动选择最佳设备: " << best_device << " (首选: " << preferred_device << ", 原始: " << original_serial_port_ << ")");
                     updateSerialPort(best_device);
                     }
                 } else {
-                    DEBUG_CORE_WARNING("No suitable serial device found, using original configuration");
+                    DEBUG_CORE_WARNING("未找到合适的串口设备，使用原始配置");
                 }
             }
         }
@@ -90,7 +90,7 @@ bool SmartConfigManager::loadConfig(const std::string& config_path, bool enable_
         return true;
         
     } catch (const std::exception& e) {
-        DEBUG_CORE_ERROR("Failed to load configuration: " << e.what());
+        DEBUG_CORE_ERROR("无法加载配置: " << e.what());
         return false;
     }
 }
@@ -105,13 +105,13 @@ std::string SmartConfigManager::getCurrentSerialPort() const {
 
 bool SmartConfigManager::setSerialPort(const std::string& port) {
     if (port.empty()) {
-        DEBUG_CORE_ERROR("Cannot set empty serial port");
+        DEBUG_CORE_ERROR("无法设置空串口");
         return false;
     }
     
     // 检查新端口是否可用
     if (detector_ && !detector_->isDeviceConnected(port)) {
-        DEBUG_CORE_WARNING("Serial port " << port << " is not currently available");
+        DEBUG_CORE_WARNING("串口 " << port << " 当前不可用");
         // 仍然允许设置，因为设备可能稍后连接
     }
     
@@ -131,7 +131,7 @@ void SmartConfigManager::enableSmartDetection(bool enable) {
             initializeDetector();
         }
         if (detector_) {
-            DEBUG_CORE_LOG("Smart serial detection enabled");
+            DEBUG_CORE_LOG("智能串口检测已启用");
             detectSerialDevices();
         }
     } else {
@@ -139,7 +139,7 @@ void SmartConfigManager::enableSmartDetection(bool enable) {
             detector_->stop();
             detector_.reset();
         }
-        DEBUG_CORE_LOG("Smart serial detection disabled");
+        DEBUG_CORE_LOG("智能串口检测已禁用");
     }
 }
 
@@ -185,7 +185,7 @@ std::string SmartConfigManager::selectBestDevice(const std::string& preferred_de
             for (const auto& device : devices) {
                 if (device.device_path == preferred_device || 
                     resolvePortPath(device.device_path) == resolvePortPath(preferred_device)) {
-                    DEBUG_CORE_LOG("Selected preferred device: " << preferred_device);
+                    DEBUG_CORE_LOG("已选择首选设备: " << preferred_device);
                     return preferred_device;
                 }
             }
@@ -218,7 +218,7 @@ std::string SmartConfigManager::selectBestDevice(const std::string& preferred_de
     }
     
     if (!best_device.empty()) {
-        DEBUG_CORE_LOG("Selected best device: " << best_device << " (priority: " << best_priority << ")");
+        DEBUG_CORE_LOG("已选择最佳设备: " << best_device << " (优先级: " << best_priority << ")");
     }
     
     return best_device;
@@ -277,7 +277,7 @@ bool SmartConfigManager::autoSwitchToAvailablePort() {
     // 选择最佳设备（排除已占用的串口）
     std::string best_device = selectBestDevice();
     if (!best_device.empty() && best_device != config_->getSerialPort()) {
-        DEBUG_CORE_LOG("Auto-switching to available port: " << best_device);
+        DEBUG_CORE_LOG("自动切换到可用端口: " << best_device);
         updateSerialPort(best_device);
         return true;
     }
@@ -298,7 +298,7 @@ void SmartConfigManager::addExcludedPort(const std::string& port) {
     }
     
     excluded_ports_.push_back(port);
-    DEBUG_CORE_LOG("Added excluded port: " << port);
+    DEBUG_CORE_LOG("已添加排除端口: " << port);
 }
 
 void SmartConfigManager::removeExcludedPort(const std::string& port) {
@@ -306,17 +306,17 @@ void SmartConfigManager::removeExcludedPort(const std::string& port) {
         std::remove(excluded_ports_.begin(), excluded_ports_.end(), port),
         excluded_ports_.end()
     );
-    DEBUG_CORE_LOG("Removed excluded port: " << port);
+    DEBUG_CORE_LOG("已移除排除端口: " << port);
 }
 
 void SmartConfigManager::clearExcludedPorts() {
     excluded_ports_.clear();
-    DEBUG_CORE_LOG("Cleared all excluded ports");
+    DEBUG_CORE_LOG("已清除所有排除端口");
 }
 
 std::string SmartConfigManager::getSerialPortStatus() const {
     std::ostringstream oss;
-    oss << "Current port: " << config_->getSerialPort();
+    oss << "当前端口: " << config_->getSerialPort();
     oss << ", Smart detection: " << (smart_detection_enabled_ ? "enabled" : "disabled");
     
     if (detector_) {
@@ -342,12 +342,12 @@ bool SmartConfigManager::setConfig(const Config& config) {
         config_ = std::make_unique<Config>(config);
         original_serial_port_ = config.getSerialPort();
         
-        DEBUG_CORE_LOG("Configuration set manually");
-        DEBUG_CORE_LOG("Serial port: " << config.getSerialPort());
+        DEBUG_CORE_LOG("配置已手动设置");
+        DEBUG_CORE_LOG("串口: " << config.getSerialPort());
         
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_ERROR("Failed to set configuration: " << e.what());
+        DEBUG_CORE_ERROR("无法设置配置: " << e.what());
         return false;
     }
 }
@@ -355,7 +355,7 @@ bool SmartConfigManager::setConfig(const Config& config) {
 void SmartConfigManager::resetToDefault() {
     if (!original_serial_port_.empty()) {
         updateSerialPort(original_serial_port_);
-        DEBUG_CORE_LOG("Reset to original serial port: " << original_serial_port_);
+        DEBUG_CORE_LOG("已重置为原始串口: " << original_serial_port_);
     }
 }
 
@@ -374,7 +374,7 @@ bool SmartConfigManager::initializeDetector() {
         
         // 启动检测器
         if (!detector_->start(true)) {
-            DEBUG_CORE_ERROR("Failed to start smart serial detector");
+            DEBUG_CORE_ERROR("无法启动智能串口检测器");
             detector_.reset();
             return false;
         }
@@ -382,45 +382,45 @@ bool SmartConfigManager::initializeDetector() {
         return true;
         
     } catch (const std::exception& e) {
-        DEBUG_CORE_ERROR("Failed to initialize smart serial detector: " << e.what());
+        DEBUG_CORE_ERROR("无法初始化智能串口检测器: " << e.what());
         detector_.reset();
         return false;
     }
 }
 
 void SmartConfigManager::onDeviceConnectionChange(const std::string& device_path, bool connected) {
-    DEBUG_CORE_LOG("Device " << device_path << " " << (connected ? "connected" : "disconnected"));
+    DEBUG_CORE_LOG("设备 " << device_path << " " << (connected ? "已连接" : "已断开"));
     
     // 简化回调逻辑，避免在回调中进行复杂的操作
     if (connected) {
-        DEBUG_CORE_LOG("Device connected: " << device_path);
+        DEBUG_CORE_LOG("设备已连接: " << device_path);
         // 延迟处理设备连接，避免在回调中阻塞
         std::thread([this, device_path]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             
             // 如果当前没有可用端口，尝试选择新连接的设备
             if (smart_detection_enabled_ && !isCurrentPortAvailable()) {
-                DEBUG_CORE_LOG("No current port available, checking if new device is suitable");
+                DEBUG_CORE_LOG("当前无可用端口，检查新设备是否合适");
                 
                 std::string best_device = selectBestDevice();
                 if (!best_device.empty() && best_device != config_->getSerialPort()) {
-                    DEBUG_CORE_LOG("Auto-selecting new device: " << best_device);
+                    DEBUG_CORE_LOG("自动选择新设备: " << best_device);
                     updateSerialPort(best_device);
                 }
             }
         }).detach();
     } else {
-        DEBUG_CORE_LOG("Device disconnected: " << device_path);
+        DEBUG_CORE_LOG("设备已断开: " << device_path);
         // 如果当前使用的设备断开连接，尝试切换到其他可用设备
         if (device_path == config_->getSerialPort()) {
-            DEBUG_CORE_WARNING("Current serial port " << device_path << " disconnected, attempting auto-switch");
+            DEBUG_CORE_WARNING("当前串口 " << device_path << " 已断开，正在尝试自动切换");
             
             // 延迟处理设备断开，避免在回调中阻塞
             std::thread([this]() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                 
                 if (!autoSwitchToAvailablePort()) {
-                    DEBUG_CORE_ERROR("Failed to auto-switch to available port, current port unavailable");
+                    DEBUG_CORE_ERROR("无法自动切换到可用端口，当前端口不可用");
                 }
             }).detach();
         }
@@ -435,7 +435,7 @@ void SmartConfigManager::updateSerialPort(const std::string& new_port) {
     std::string old_port = config_->getSerialPort();
     config_->serial_port = new_port;
     
-    DEBUG_CORE_LOG("Serial port updated: " << old_port << " -> " << new_port);
+    DEBUG_CORE_LOG("串口已更新: " << old_port << " -> " << new_port);
     
     // 调用回调函数
     if (port_callback_) {

@@ -58,13 +58,13 @@ bool SmartSerialDetector::start(bool enable_hotplug) {
     // 执行初始扫描
     scanDevices();
 
-    DEBUG_CORE_LOG("Smart Serial Detector started successfully");
+    DEBUG_CORE_LOG("智能串口检测器已成功启动");
     return true;
 }
 
 void SmartSerialDetector::stop() {
     if (!running_.load()) {
-        DEBUG_CORE_LOG("Smart Serial Detector already stopped");
+        DEBUG_CORE_LOG("智能串口检测器已停止");
         return;
     }
 
@@ -91,7 +91,7 @@ void SmartSerialDetector::stop() {
     std::lock_guard<std::mutex> lock(devices_mutex_);
     devices_.clear();
 
-    DEBUG_CORE_LOG("Smart Serial Detector stopped");
+    DEBUG_CORE_LOG("智能串口检测器已停止");
 }
 
 int SmartSerialDetector::scanDevices() {
@@ -109,7 +109,7 @@ int SmartSerialDetector::scanDevices() {
         // 扫描/dev目录
         DIR* dir = opendir("/dev");
         if (!dir) {
-            DEBUG_CORE_LOG("Cannot open /dev directory");
+            DEBUG_CORE_LOG("无法打开 /dev 目录");
             continue;
         }
 
@@ -220,7 +220,7 @@ bool SmartSerialDetector::reconnectDevice(const std::string& device_path) {
             now - info->last_reconnect_attempt).count();
         
         if (time_since_last_attempt < RECONNECT_INTERVAL_MS) {
-            DEBUG_CORE_LOG("Reconnect attempt too soon for device: " << device_path);
+            DEBUG_CORE_LOG("设备重连尝试过于频繁: " << device_path);
             return false;
         }
         
@@ -234,7 +234,7 @@ bool SmartSerialDetector::reconnectDevice(const std::string& device_path) {
             info->last_seen = now;
             info->reconnect_attempts = 0; // 重置重连计数
             
-            DEBUG_CORE_LOG("Device reconnected: " << device_path);
+            DEBUG_CORE_LOG("设备已重新连接: " << device_path);
             
             if (device_callback_) {
                 device_callback_(device_path, true);
@@ -310,7 +310,7 @@ std::string SmartSerialDetector::selectBestDevice(const std::string& preferred_d
     if (!preferred_device.empty()) {
         auto it = devices_.find(preferred_device);
         if (it != devices_.end() && it->second && it->second->is_connected) {
-            DEBUG_CORE_LOG("Selected preferred device: " << preferred_device);
+            DEBUG_CORE_LOG("已选择首选设备: " << preferred_device);
             return preferred_device;
         }
     }

@@ -50,7 +50,7 @@ bool JoystickManager::initialize(bool enable_ros2,
         initialized_ = true;
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("JoystickManager initialization failed: " << e.what());
+        DEBUG_CORE_LOG("摇杆管理器初始化失败: " << e.what());
         return false;
     }
 }
@@ -64,7 +64,7 @@ void JoystickManager::setAxisMapping(int linear_x_axis, int linear_y_axis, int l
     axis_mapping_.angular_y = angular_y_axis;
     axis_mapping_.angular_z = angular_z_axis;
     
-    DEBUG_CORE_LOG("Axis mapping set: linear_x=" << linear_x_axis 
+    DEBUG_CORE_LOG("轴映射已设置: linear_x=" << linear_x_axis 
                   << ", linear_y=" << linear_y_axis 
                   << ", linear_z=" << linear_z_axis
                   << ", angular_x=" << angular_x_axis 
@@ -74,7 +74,7 @@ void JoystickManager::setAxisMapping(int linear_x_axis, int linear_y_axis, int l
 
 bool JoystickManager::start() {
     if (!initialized_) {
-        DEBUG_CORE_LOG("JoystickManager not initialized");
+        DEBUG_CORE_LOG("摇杆管理器未初始化");
         return false;
     }
 
@@ -85,29 +85,29 @@ bool JoystickManager::start() {
 
     // 启动手柄检测器
     if (!joystick_detector_->start(true)) {
-        DEBUG_JOYSTICK_LOG("Failed to start joystick detector");
+        DEBUG_JOYSTICK_LOG("无法启动摇杆检测器");
         return false;
     }
 
-    DEBUG_JOYSTICK_LOG("Joystick detector started successfully");
+    DEBUG_JOYSTICK_LOG("摇杆检测器已成功启动");
 
     // 扫描当前连接的手柄
     int device_count = joystick_detector_->scanDevices();
-    DEBUG_JOYSTICK_LOG("Found " << device_count << " physical joystick devices");
+    DEBUG_JOYSTICK_LOG("找到 " << device_count << " 个物理摇杆设备");
 
     // 显示已连接手柄的信息
     auto devices = joystick_detector_->getConnectedDevices();
     for (const auto& device : devices) {
-        DEBUG_JOYSTICK_LOG("Device: " << device.device_path 
-                         << " Name: " << device.device_name
-                         << " Axes: " << device.num_axes 
-                         << " Buttons: " << device.num_buttons);
+        DEBUG_JOYSTICK_LOG("设备: " << device.device_path 
+                         << " 名称: " << device.device_name
+                         << " 轴数: " << device.num_axes 
+                         << " 按钮数: " << device.num_buttons);
     }
 
     // 启动定时发送线程
     timer_running_.store(true);
     timer_thread_ = std::thread(&JoystickManager::timerThread, this);
-    DEBUG_JOYSTICK_LOG("Timer thread started with interval: " << timer_interval_ms_.load() << "ms");
+    DEBUG_JOYSTICK_LOG("定时器线程已启动，间隔: " << timer_interval_ms_.load() << "ms");
 
     return true;
 }
@@ -117,12 +117,12 @@ void JoystickManager::stop() {
     timer_running_.store(false);
     if (timer_thread_.joinable()) {
         timer_thread_.join();
-        DEBUG_JOYSTICK_LOG("Timer thread stopped");
+        DEBUG_JOYSTICK_LOG("定时器线程已停止");
     }
     
     if (joystick_detector_) {
         joystick_detector_->stop();
-        DEBUG_JOYSTICK_LOG("Joystick detector stopped");
+        DEBUG_JOYSTICK_LOG("摇杆检测器已停止");
     }
 }
 
@@ -146,12 +146,12 @@ bool JoystickManager::isRunning() const {
 
 void JoystickManager::pause() {
     paused_.store(true);
-    DEBUG_JOYSTICK_LOG("JoystickManager paused - USB joystick data processing disabled");
+    DEBUG_JOYSTICK_LOG("摇杆管理器已暂停 - USB 摇杆数据处理已禁用");
 }
 
 void JoystickManager::resume() {
     paused_.store(false);
-    DEBUG_JOYSTICK_LOG("JoystickManager resumed - USB joystick data processing enabled");
+    DEBUG_JOYSTICK_LOG("摇杆管理器已恢复 - USB 摇杆数据处理已启用");
 }
 
 bool JoystickManager::shouldProcessDevice(const std::string& device_path) const {
@@ -173,7 +173,7 @@ void JoystickManager::setTimerInterval(int interval_ms) {
                                     USB_JOYSTICK_TIMER_MIN_INTERVAL_MS, 
                                     USB_JOYSTICK_TIMER_MAX_INTERVAL_MS);
     timer_interval_ms_.store(clamped_interval);
-    DEBUG_JOYSTICK_LOG("Timer interval set to: " << clamped_interval << "ms");
+    DEBUG_JOYSTICK_LOG("定时器间隔已设置为: " << clamped_interval << "ms");
 }
 
 void JoystickManager::onJoystickEvent(const std::string& device_path, int event_type, int code, int value) {
@@ -185,20 +185,20 @@ void JoystickManager::onJoystickEvent(const std::string& device_path, int event_
 
     // 检查设备是否应该被处理
     if (!shouldProcessDevice(device_path)) {
-        DEBUG_JOYSTICK_LOG("Device filtered out, ignoring event from " << device_path);
+        DEBUG_JOYSTICK_LOG("设备已被过滤，忽略来自 " << device_path << " 的事件");
         return;
     }
 
     switch (event_type) {
         case JoystickDetector::EVENT_CONNECT: {
-            DEBUG_JOYSTICK_LOG("Physical joystick connected: " << device_path);
+            DEBUG_JOYSTICK_LOG("物理摇杆已连接: " << device_path);
 #ifdef ENABLE_ROS2
             handleDeviceConnect(device_path);
 #endif
             break;
         }
         case JoystickDetector::EVENT_DISCONNECT: {
-            DEBUG_JOYSTICK_LOG("Physical joystick disconnected: " << device_path);
+            DEBUG_JOYSTICK_LOG("物理摇杆已断开: " << device_path);
 #ifdef ENABLE_ROS2
             handleDeviceDisconnect(device_path);
 #endif
@@ -209,7 +209,7 @@ void JoystickManager::onJoystickEvent(const std::string& device_path, int event_
             static std::map<std::string, int> last_axis_values;
             int last_value = last_axis_values[device_path + "_" + std::to_string(code)];
             if (abs(value - last_value) > 1000) {  // 只在值变化超过1000时输出日志
-                DEBUG_JOYSTICK_LOG("Axis event from " << device_path << ": axis=" << code << " value=" << value);
+                DEBUG_JOYSTICK_LOG("来自 " << device_path << " 的轴事件: axis=" << code << " value=" << value);
                 last_axis_values[device_path + "_" + std::to_string(code)] = value;
             }
 #ifdef ENABLE_ROS2
@@ -219,7 +219,7 @@ void JoystickManager::onJoystickEvent(const std::string& device_path, int event_
             break;
         }
         case JoystickDetector::EVENT_BUTTON: {
-            DEBUG_JOYSTICK_LOG("Button event from " << device_path << ": button=" << code << " value=" << value);
+            DEBUG_JOYSTICK_LOG("来自 " << device_path << " 的按钮事件: button=" << code << " value=" << value);
 #ifdef ENABLE_ROS2
             // 只更新数据缓存，不立即发布消息（由定时器统一发布）
             updateButtonData(device_path, code, value);
@@ -328,12 +328,12 @@ void JoystickManager::publishJoyMessage(const std::string& device_path) {
     }
 
     joy_pub_->publish(joy_msg);
-    DEBUG_ROS2_PUBLISH_LOG("Joy message published for device: " << device_path);
+    DEBUG_ROS2_PUBLISH_LOG("已为设备发布 Joy 消息: " << device_path);
     
     // 轴数据打印（通过DEBUG_ROS2_AXES控制）
     if (joy_msg.axes.size() > 0) {
         std::ostringstream axes_oss;
-        axes_oss << "ROS2[" << device_path << "] Axes:[";
+        axes_oss << "ROS2[" << device_path << "] 轴:[";
         for (int i = 0; i < MAX_JOYSTICK_AXES && i < static_cast<int>(joy_msg.axes.size()); i++) {
             if (i > 0) axes_oss << ",";
             axes_oss << std::fixed << std::setprecision(2) << joy_msg.axes[i];
@@ -345,7 +345,7 @@ void JoystickManager::publishJoyMessage(const std::string& device_path) {
     // 按钮数据打印（通过DEBUG_ROS2_BUTTONS控制）
     if (joy_msg.buttons.size() > 0) {
         std::ostringstream buttons_oss;
-        buttons_oss << "ROS2[" << device_path << "] Buttons:[";
+        buttons_oss << "ROS2[" << device_path << "] 按钮:[";
         for (int i = 0; i < MAX_JOYSTICK_BUTTONS && i < static_cast<int>(joy_msg.buttons.size()); i++) {
             if (i > 0) buttons_oss << ",";
             buttons_oss << joy_msg.buttons[i];
@@ -390,14 +390,14 @@ void JoystickManager::publishTwistMessage(const std::string& device_path) {
     }
 
     twist_pub_->publish(twist_msg);
-    DEBUG_ROS2_PUBLISH_LOG("Twist message published for device: " << device_path);
+    DEBUG_ROS2_PUBLISH_LOG("已为设备发布 Twist 消息: " << device_path);
     
     // Twist数据打印（通过DEBUG_ROS2_TWIST控制）
     std::ostringstream twist_oss;
-    twist_oss << "ROS2[" << device_path << "] Twist: linear=(" 
+    twist_oss << "ROS2[" << device_path << "] 速度: 线性=(" 
               << std::fixed << std::setprecision(2) << twist_msg.linear.x << ","
               << std::fixed << std::setprecision(2) << twist_msg.linear.y << ","
-              << std::fixed << std::setprecision(2) << twist_msg.linear.z << ") angular=("
+              << std::fixed << std::setprecision(2) << twist_msg.linear.z << ") 角速度=("
               << std::fixed << std::setprecision(2) << twist_msg.angular.x << ","
               << std::fixed << std::setprecision(2) << twist_msg.angular.y << ","
               << std::fixed << std::setprecision(2) << twist_msg.angular.z << ")";
@@ -410,14 +410,14 @@ void JoystickManager::publishDeviceStatus(const std::string& status, const std::
     auto status_msg = std_msgs::msg::String();
     status_msg.data = status + ":" + device_path;
     status_pub_->publish(status_msg);
-    DEBUG_ROS2_PUBLISH_LOG("Status message published: " << status_msg.data);
+    DEBUG_ROS2_PUBLISH_LOG("已发布状态消息: " << status_msg.data);
     
     // 状态数据打印（通过DEBUG_ROS2_STATUS控制）
     DEBUG_ROS2_STATUS_LOG("ROS2[" << device_path << "] Status: " << status);
 }
 
 void JoystickManager::timerThread() {
-    DEBUG_JOYSTICK_LOG("Timer thread started");
+    DEBUG_JOYSTICK_LOG("定时器线程已启动");
     
     while (timer_running_.load()) {
         auto start_time = std::chrono::steady_clock::now();
@@ -445,12 +445,12 @@ void JoystickManager::timerThread() {
         }
     }
     
-    DEBUG_JOYSTICK_LOG("Timer thread stopped");
+    DEBUG_JOYSTICK_LOG("定时器线程已停止");
 }
 
 void JoystickManager::readDeviceCurrentState(const std::string& device_path) {
     // 这个方法可以用于主动读取设备状态，但目前我们依赖事件驱动
     // 如果需要主动轮询，可以在这里实现
-    DEBUG_JOYSTICK_LOG("Reading current state for device: " << device_path);
+    DEBUG_JOYSTICK_LOG("正在读取设备当前状态: " << device_path);
 }
 #endif

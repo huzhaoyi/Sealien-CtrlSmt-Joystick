@@ -54,44 +54,44 @@ bool ApplicationController::initialize(const std::string& config_path, bool enab
         
         // 初始化智能配置管理器
         if (!initializeConfig(config_path)) {
-            DEBUG_CONFIG_ERROR("Config initialization failed");
+            DEBUG_CONFIG_ERROR("配置初始化失败");
             return false;
         }
 
         // 根据配置文件中的enable_modbus设置决定是否初始化Modbus
         enable_modbus_ = smart_config_->getConfig().getEnableModbus();
         if (enable_modbus_) {
-            DEBUG_CORE_LOG("Modbus functionality enabled by config, attempting to initialize Modbus client");
+            DEBUG_CORE_LOG("配置已启用 Modbus 功能，正在尝试初始化 Modbus 客户端");
             if (!initializeModbus()) {
-                DEBUG_MODBUS_WARNING("Modbus initialization failed, will run in USB joystick only mode");
+                DEBUG_MODBUS_WARNING("Modbus 初始化失败，将以仅 USB 摇杆模式运行");
                 enable_modbus_ = false;  // 如果初始化失败，禁用modbus功能
             }
         } else {
-            DEBUG_CORE_LOG("Modbus functionality disabled, skipping Modbus initialization");
+            DEBUG_CORE_LOG("Modbus 功能已禁用，跳过 Modbus 初始化");
         }
 
         // 总是尝试初始化ROS2（自动检测模式）
         if (!initializeROS2(0, nullptr)) {
-            DEBUG_CORE_WARNING("ROS2 initialization failed, continuing without ROS2");
+            DEBUG_CORE_WARNING("ROS2 初始化失败，继续运行但不启用 ROS2");
             enable_ros2_ = false;
         }
 
         // 初始化手柄管理器（总是尝试，支持动态检测）
         if (!initializeJoystickManager()) {
-            DEBUG_CORE_ERROR("Joystick manager initialization failed");
+            DEBUG_CORE_ERROR("摇杆管理器初始化失败");
             return false;
         }
 
         // 初始化USB转串口设备检测器
         if (!initializeUSBSerialDetector()) {
-            DEBUG_CORE_ERROR("USB Serial detector initialization failed");
+            DEBUG_CORE_ERROR("USB 串口检测器初始化失败");
             return false;
         }
 
         // 初始化uinput设备（仅在Modbus模式下需要，但可选）
         if (enable_modbus_ && modbus_connected_) {
             if (!initializeUInput()) {
-                DEBUG_UINPUT_ERROR("uinput initialization failed");
+                DEBUG_UINPUT_ERROR("uinput 初始化失败");
 #ifdef ENABLE_ROS2
                 // 如果启用了ROS2，即使uinput失败也可以继续运行（仅ROS2输出）
                 if (enable_ros2_) {
@@ -109,9 +109,9 @@ bool ApplicationController::initialize(const std::string& config_path, bool enab
 #endif
             }
 
-            // 初始化Modbus数据处理器（即使uinput失败也可以继续，如果启用了ROS2）
-            if (!initializeModbusProcessor()) {
-                DEBUG_CORE_ERROR("Modbus data processor initialization failed");
+            // 初始化采集卡数据处理器（即使uinput失败也可以继续，如果启用了ROS2）
+            if (!initializeAcquisitionCardProcessor()) {
+                DEBUG_CORE_ERROR("采集卡数据处理器初始化失败");
                 return false;
             }
 
@@ -119,10 +119,10 @@ bool ApplicationController::initialize(const std::string& config_path, bool enab
             const auto& config = smart_config_->getConfig();
             if (config.getEnableValveControl()) {
                 if (!initializeValveControlProcessor()) {
-                    DEBUG_CORE_WARNING("Valve control processor initialization failed, continuing without valve control");
+                    DEBUG_CORE_WARNING("阀控板处理器初始化失败，继续运行但不启用阀控功能");
                 }
             } else {
-                DEBUG_CORE_LOG("Valve control is disabled in configuration, skipping initialization");
+                DEBUG_CORE_LOG("配置中已禁用阀控功能，跳过初始化");
             }
         }
 
@@ -130,24 +130,24 @@ bool ApplicationController::initialize(const std::string& config_path, bool enab
         registerSignalHandlers();
 
         initialized_ = true;
-        DEBUG_CORE_LOG("Application controller initialized successfully");
-        DEBUG_CORE_LOG("Modbus enabled: " << (enable_modbus_ ? "YES" : "NO"));
-        DEBUG_CORE_LOG("Modbus connected: " << (modbus_connected_ ? "YES" : "NO"));
+        DEBUG_CORE_LOG("应用程序控制器初始化成功");
+        DEBUG_CORE_LOG("Modbus 已启用: " << (enable_modbus_ ? "是" : "否"));
+        DEBUG_CORE_LOG("Modbus 已连接: " << (modbus_connected_ ? "是" : "否"));
         return true;
 
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("Application controller initialization failed: " << e.what());
+        DEBUG_CORE_LOG("应用程序控制器初始化失败: " << e.what());
         return false;
     }
 }
 
 bool ApplicationController::run() {
     if (!initialized_) {
-        DEBUG_CORE_LOG("Application controller not initialized");
+        DEBUG_CORE_LOG("应用程序控制器未初始化");
         return false;
     }
 
-    DEBUG_CORE_LOG("Starting application main loop...");
+    DEBUG_CORE_LOG("正在启动应用程序主循环...");
 
 #ifdef ENABLE_ROS2
     // 在启动时立即创建并发布一次heartbeat，帮助ROS2发现机制
@@ -164,7 +164,7 @@ bool ApplicationController::run() {
     // 使用动态检测模式
     runDynamicMode();
 
-    DEBUG_CORE_LOG("Application main loop ended");
+    DEBUG_CORE_LOG("应用程序主循环已结束");
     return true;
 }
 
@@ -177,20 +177,20 @@ bool ApplicationController::initializeROS2(int argc, char** argv) {
     try {
         // 初始化ROS2
         rclcpp::init(argc, argv);
-        DEBUG_CORE_LOG("ROS2 initialized");
+        DEBUG_CORE_LOG("ROS2 已初始化");
 
         // 创建ROS2节点
         ros2_node_ = std::make_shared<rclcpp::Node>(ROS2_NODE_NAME);
-        DEBUG_CORE_LOG("ROS2 node created: " << ROS2_NODE_NAME);
+        DEBUG_CORE_LOG("ROS2 节点已创建: " << ROS2_NODE_NAME);
 
         ros2_initialized_ = true;
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("ROS2 initialization failed: " << e.what());
+        DEBUG_CORE_LOG("ROS2 初始化失败: " << e.what());
         return false;
     }
 #else
-    DEBUG_CORE_LOG("ROS2 not enabled in this build");
+    DEBUG_CORE_LOG("此构建中未启用 ROS2");
     return false;
 #endif
 }
@@ -202,7 +202,7 @@ bool ApplicationController::initializeConfig(const std::string& config_path) {
         
         if (config_path.empty()) {
             // 没有配置文件，使用默认配置
-            DEBUG_CONFIG_LOG("No config file specified, using default configuration");
+            DEBUG_CONFIG_LOG("未指定配置文件，使用默认配置");
             // 创建一个默认配置
             Config default_config;
             default_config.enable_modbus = false;  // 默认禁用Modbus
@@ -220,7 +220,7 @@ bool ApplicationController::initializeConfig(const std::string& config_path) {
             
             // 手动设置配置（不使用智能检测）
             if (!smart_config_->setConfig(default_config)) {
-                DEBUG_CONFIG_ERROR("Failed to set default configuration");
+                DEBUG_CONFIG_ERROR("无法设置默认配置");
                 return false;
             }
             smart_config_->enableSmartDetection(false);
@@ -230,26 +230,26 @@ bool ApplicationController::initializeConfig(const std::string& config_path) {
         } else {
             // 加载指定配置文件，启用智能串口检测
             if (!smart_config_->loadConfig(config_path, true)) {
-                DEBUG_CONFIG_ERROR("Failed to load configuration from: " << config_path);
+                DEBUG_CONFIG_ERROR("无法从以下路径加载配置: " << config_path);
                 return false;
             }
             
             const auto& config = smart_config_->getConfig();
-            DEBUG_CONFIG_LOG("Config loaded. serial=" << config.getSerialPort() 
+            DEBUG_CONFIG_LOG("配置已加载. serial=" << config.getSerialPort() 
                              << " baud=" << config.getBaud() 
                              << " slave=" << config.getSlaveId());
-            DEBUG_CONFIG_LOG("Smart serial detection: " << (smart_config_->isSmartDetectionEnabled() ? "enabled" : "disabled"));
-            DEBUG_CONFIG_LOG("Serial port status: " << smart_config_->getSerialPortStatus());
+            DEBUG_CONFIG_LOG("智能串口检测: " << (smart_config_->isSmartDetectionEnabled() ? "已启用" : "已禁用"));
+            DEBUG_CONFIG_LOG("串口状态: " << smart_config_->getSerialPortStatus());
 
             // 计算轮询周期
             poll_hz_ = std::max(1.0, config.getPollHz());
             
             // 设置串口变化回调
             smart_config_->setSerialPortCallback([this](const std::string& old_port, const std::string& new_port) {
-                DEBUG_CORE_LOG("Serial port changed: " << old_port << " -> " << new_port);
+                DEBUG_CORE_LOG("串口已更改: " << old_port << " -> " << new_port);
                 // 如果Modbus客户端存在，需要重新初始化
                 if (modbus_client_) {
-                    DEBUG_CORE_LOG("Reinitializing Modbus client with new port");
+                    DEBUG_CORE_LOG("正在使用新端口重新初始化 Modbus 客户端");
                     initializeModbus();
                 }
             });
@@ -257,7 +257,7 @@ bool ApplicationController::initializeConfig(const std::string& config_path) {
             return true;
         }
     } catch (const std::exception& e) {
-        DEBUG_CONFIG_LOG("Load config failed: " << e.what());
+        DEBUG_CONFIG_LOG("加载配置失败: " << e.what());
         return false;
     }
 }
@@ -273,11 +273,11 @@ bool ApplicationController::initializeModbus() {
             std::string found_port = findDeviceBySerialNumber(config.getSerialNumber());
             if (!found_port.empty()) {
                 modbus_port = found_port;
-                DEBUG_CORE_LOG("Found Modbus device by configured serial number: " << config.getSerialNumber() << " -> " << modbus_port);
+                DEBUG_CORE_LOG("通过配置的序列号找到采集卡: " << config.getSerialNumber() << " -> " << modbus_port);
                 // 更新配置中的端口
                 smart_config_->setSerialPort(modbus_port);
             } else {
-                DEBUG_CORE_WARNING("Configured serial number " << config.getSerialNumber() << " not found, using configured port: " << modbus_port);
+                DEBUG_CORE_WARNING("配置的序列号 " << config.getSerialNumber() << " 未找到，使用配置的端口: " << modbus_port);
             }
         }
         
@@ -288,7 +288,8 @@ bool ApplicationController::initializeModbus() {
             config.getDataBits(), 
             config.getStopBits(), 
             config.getSlaveId(), 
-            config.getBusErrorThreshold()
+            config.getBusErrorThreshold(),
+            "采集卡"  // 设备类型为"采集卡"
         );
 
         // 启用自动重连功能
@@ -301,25 +302,25 @@ bool ApplicationController::initializeModbus() {
 
         modbus_connected_ = modbus_client_->connect();
         if (modbus_connected_) {
-            DEBUG_MODBUS_COMM_LOG("Modbus connected.");
-            // 保存主 Modbus 设备的 USB 序列号（用于重连识别）
+            DEBUG_MODBUS_COMM_LOG("Modbus 已连接");
+            // 保存采集卡的 USB 序列号（用于重连识别）
             // 优先使用配置的序列号，如果没有配置则从设备读取
             if (!config.getSerialNumber().empty()) {
-                main_modbus_serial_number_ = config.getSerialNumber();
-                DEBUG_CORE_LOG("Main Modbus device serial number (from config): " << main_modbus_serial_number_);
+                acquisition_card_serial_number_ = config.getSerialNumber();
+                DEBUG_CORE_LOG("采集卡序列号 (来自配置): " << acquisition_card_serial_number_);
             } else {
                 std::string current_port = smart_config_->getCurrentSerialPort();
-                main_modbus_serial_number_ = getUSBSerialNumber(current_port);
-                if (!main_modbus_serial_number_.empty()) {
-                    DEBUG_CORE_LOG("Main Modbus device serial number (from device): " << main_modbus_serial_number_);
+                acquisition_card_serial_number_ = getUSBSerialNumber(current_port);
+                if (!acquisition_card_serial_number_.empty()) {
+                    DEBUG_CORE_LOG("采集卡序列号 (来自设备): " << acquisition_card_serial_number_);
                 }
             }
         } else {
-            DEBUG_MODBUS_COMM_LOG("Modbus initial connection failed, auto-reconnect enabled");
+            DEBUG_MODBUS_COMM_LOG("Modbus 初始连接失败，已启用自动重连");
         }
         return true;
     } catch (const std::exception& e) {
-        DEBUG_MODBUS_COMM_LOG("Modbus initialization failed: " << e.what());
+        DEBUG_MODBUS_COMM_LOG("Modbus 初始化失败: " << e.what());
         return false;
     }
 }
@@ -346,7 +347,7 @@ bool ApplicationController::initializeUInput() {
 
         // 创建虚拟输入设备
         if (!uinput_device_->create("Modbus Virtual Joystick (cfg)", 0x23A7, 0x0002, 1, abs_codes, key_codes)) {
-            DEBUG_UINPUT_LOG("uinput create failed");
+            DEBUG_UINPUT_LOG("uinput 创建失败");
             return false;
         }
 
@@ -356,38 +357,38 @@ bool ApplicationController::initializeUInput() {
         }
 
         uinput_created_ = true;
-        DEBUG_UINPUT_LOG("uinput joystick created.");
+        DEBUG_UINPUT_LOG("uinput 摇杆已创建");
         
         return true;
     } catch (const std::exception& e) {
-        DEBUG_UINPUT_LOG("uinput initialization failed: " << e.what());
+        DEBUG_UINPUT_LOG("uinput 初始化失败: " << e.what());
         return false;
     }
 }
 
-bool ApplicationController::initializeModbusProcessor() {
+bool ApplicationController::initializeAcquisitionCardProcessor() {
     try {
         const auto& config = smart_config_->getConfig();
         // 如果uinput初始化失败，传入nullptr（仅ROS2模式）
         UInputDevice* uinput_ptr = uinput_created_ && uinput_device_ ? uinput_device_.get() : nullptr;
         
 #ifdef ENABLE_ROS2
-        modbus_processor_ = std::make_unique<ModbusDataProcessor>(
+        acquisition_card_processor_ = std::make_unique<AcquisitionCardProcessor>(
             const_cast<Config&>(config), 
             *modbus_client_, 
             uinput_ptr,
             ros2_node_
         );
 #else
-        modbus_processor_ = std::make_unique<ModbusDataProcessor>(
+        acquisition_card_processor_ = std::make_unique<AcquisitionCardProcessor>(
             const_cast<Config&>(config), 
             *modbus_client_, 
             uinput_ptr
         );
 #endif
 
-        if (!modbus_processor_->initialize()) {
-            DEBUG_CORE_LOG("Modbus data processor initialization failed");
+        if (!acquisition_card_processor_->initialize()) {
+            DEBUG_CORE_LOG("采集卡数据处理器初始化失败");
             return false;
         }
         
@@ -401,15 +402,15 @@ bool ApplicationController::initializeModbusProcessor() {
             int angular_y = ros2_node_->get_parameter("axis_mapping.angular_y").as_int();
             int angular_z = ros2_node_->get_parameter("axis_mapping.angular_z").as_int();
             
-            modbus_processor_->setAxisMapping(linear_x, linear_y, linear_z, angular_x, angular_y, angular_z);
-            DEBUG_CORE_LOG("Modbus axis mapping configured from ROS2 parameters");
+            acquisition_card_processor_->setAxisMapping(linear_x, linear_y, linear_z, angular_x, angular_y, angular_z);
+            DEBUG_CORE_LOG("采集卡轴映射已从ROS2参数配置");
         }
 #endif
 
-        DEBUG_CORE_LOG("Modbus data processor initialized successfully");
+        DEBUG_CORE_LOG("采集卡数据处理器初始化成功");
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("Modbus data processor initialization failed: " << e.what());
+        DEBUG_CORE_LOG("采集卡数据处理器初始化失败: " << e.what());
         return false;
     }
 }
@@ -420,7 +421,7 @@ bool ApplicationController::initializeValveControlProcessor() {
         
         // 检查是否启用阀控板功能
         if (!config.getEnableValveControl()) {
-            DEBUG_CORE_LOG("Valve control is disabled in configuration");
+            DEBUG_CORE_LOG("配置中已禁用阀控功能");
             return true; // 不启用阀控板不算错误
         }
         
@@ -442,7 +443,7 @@ bool ApplicationController::initializeValveControlProcessor() {
                 }
             }
             
-            DEBUG_CORE_LOG("Loading valve control config from: " << full_path << " (original: " << valve_config_file << ")");
+            DEBUG_CORE_LOG("正在从以下路径加载阀控板配置: " << full_path << " (原始路径: " << valve_config_file << ")");
             try {
                 // 加载阀控板配置文件，只提取 valve_control 段
                 YAML::Node y = YAML::LoadFile(full_path);
@@ -453,20 +454,20 @@ bool ApplicationController::initializeValveControlProcessor() {
                         if (serial_port == "auto" || serial_port == "smart") {
                             // 使用智能串口检测
                             if (smart_config_->isSmartDetectionEnabled()) {
-                                // 获取主 Modbus 设备使用的串口，避免冲突
-                                std::string main_modbus_port = smart_config_->getCurrentSerialPort();
+                                // 获取采集卡使用的串口，避免冲突
+                                std::string acquisition_card_port = smart_config_->getCurrentSerialPort();
                                 
                                 // 获取所有检测到的设备
                                 auto detected_devices = smart_config_->getDetectedDevices();
                                 
-                                // 选择最佳设备（排除主 Modbus 设备使用的串口）
+                                // 选择最佳设备（排除采集卡使用的串口）
                                 std::string best_port = "";
                                 int best_priority = -1;
                                 
                                 for (const auto& device : detected_devices) {
-                                    // 跳过主 Modbus 设备使用的串口
-                                    if (device.device_path == main_modbus_port) {
-                                        DEBUG_CORE_LOG("Skipping main Modbus port for valve control: " << device.device_path);
+                                    // 跳过采集卡使用的串口
+                                    if (device.device_path == acquisition_card_port) {
+                                        DEBUG_CORE_LOG("跳过采集卡端口用于阀控板: " << device.device_path);
                                         continue;
                                     }
                                     
@@ -479,24 +480,24 @@ bool ApplicationController::initializeValveControlProcessor() {
                                 
                                 if (!best_port.empty()) {
                                     valve_config.valve_control_port = best_port;
-                                    DEBUG_CORE_LOG("Valve control port selected by smart detection: " << best_port 
-                                                  << " (priority: " << best_priority << ", main Modbus port: " << main_modbus_port << ")");
+                                    DEBUG_CORE_LOG("阀控板端口通过智能检测选择: " << best_port 
+                                                  << " (优先级: " << best_priority << ", 采集卡端口: " << acquisition_card_port << ")");
                                 } else {
                                     // 如果没有找到其他设备，尝试使用智能检测的默认选择
                                     std::string detected_port = smart_config_->selectBestDevice("");
-                                    if (!detected_port.empty() && detected_port != main_modbus_port) {
+                                    if (!detected_port.empty() && detected_port != acquisition_card_port) {
                                         valve_config.valve_control_port = detected_port;
-                                        DEBUG_CORE_LOG("Valve control port selected by smart detection (fallback): " << detected_port);
+                                        DEBUG_CORE_LOG("阀控板端口通过智能检测选择 (备用): " << detected_port);
                                     } else {
                             valve_config.valve_control_port = DEFAULT_SERIAL_PORT;
-                                        DEBUG_CORE_WARNING("Smart detection found no suitable port for valve control (main Modbus uses: " 
-                                                          << main_modbus_port << "), using default: " << DEFAULT_SERIAL_PORT);
+                                        DEBUG_CORE_WARNING("智能检测未找到合适的阀控板端口 (采集卡使用: " 
+                                                          << acquisition_card_port << "), 使用默认: " << DEFAULT_SERIAL_PORT);
                                     }
                                 }
                         } else {
                                 // 智能检测未启用，使用默认值
                                 valve_config.valve_control_port = DEFAULT_SERIAL_PORT;
-                                DEBUG_CORE_WARNING("Smart detection is disabled, using default port for valve control: " << DEFAULT_SERIAL_PORT);
+                                DEBUG_CORE_WARNING("智能检测已禁用，使用阀控板默认端口: " << DEFAULT_SERIAL_PORT);
                             }
                         } else {
                             // 指定了具体串口路径，直接使用
@@ -517,12 +518,12 @@ bool ApplicationController::initializeValveControlProcessor() {
                     if (vc["data_bits"]) valve_config.valve_control_data_bits = vc["data_bits"].as<int>();
                     if (vc["stop_bits"]) valve_config.valve_control_stop_bits = vc["stop_bits"].as<int>();
                     if (vc["slave_id"]) valve_config.valve_control_slave_id = vc["slave_id"].as<int>();
-                    DEBUG_CORE_LOG("Valve control config loaded from separate file");
+                    DEBUG_CORE_LOG("已从独立文件加载阀控板配置");
                 } else {
-                    DEBUG_CORE_WARNING("Valve control config file found but no 'valve_control' section, using default values");
+                    DEBUG_CORE_WARNING("找到阀控板配置文件但缺少 'valve_control' 段，使用默认值");
                 }
             } catch (const std::exception& e) {
-                DEBUG_CORE_WARNING("Failed to load valve control config file: " << valve_config_file << ", using main config values: " << e.what());
+                DEBUG_CORE_WARNING("无法加载阀控板配置文件: " << valve_config_file << "，使用主配置值: " << e.what());
             }
         }
         
@@ -532,34 +533,33 @@ bool ApplicationController::initializeValveControlProcessor() {
         char valve_parity = valve_config.getValveControlParity();
         int valve_data_bits = valve_config.getValveControlDataBits();
         int valve_stop_bits = valve_config.getValveControlStopBits();
-        int valve_slave_id = valve_config.getValveControlSlaveId();
         
         // 优先使用配置的序列号查找设备
-        std::string main_modbus_port = smart_config_->getCurrentSerialPort();
+        std::string acquisition_card_port = smart_config_->getCurrentSerialPort();
         if (!valve_config.getValveControlSerialNumber().empty()) {
-            // 配置了序列号，通过序列号查找设备（排除主 Modbus 设备）
-            std::vector<std::string> exclude_ports = {main_modbus_port};
+            // 配置了序列号，通过序列号查找设备（排除采集卡）
+            std::vector<std::string> exclude_ports = {acquisition_card_port};
             std::string found_port = findDeviceBySerialNumber(valve_config.getValveControlSerialNumber(), exclude_ports);
             if (!found_port.empty()) {
                 valve_port = found_port;
-                DEBUG_CORE_LOG("Found valve control device by configured serial number: " << valve_config.getValveControlSerialNumber() << " -> " << valve_port);
+                DEBUG_CORE_LOG("通过配置的序列号找到阀控板设备: " << valve_config.getValveControlSerialNumber() << " -> " << valve_port);
             } else {
-                DEBUG_CORE_WARNING("Configured serial number " << valve_config.getValveControlSerialNumber() << " not found, using configured port: " << valve_port);
+                DEBUG_CORE_WARNING("配置的序列号 " << valve_config.getValveControlSerialNumber() << " 未找到，使用配置的端口: " << valve_port);
             }
         }
         
-        // 检查串口冲突：解析符号链接并检查是否与主 Modbus 设备使用同一物理串口
+        // 检查串口冲突：解析符号链接并检查是否与采集卡使用同一物理串口
         std::string valve_port_resolved = resolveSymbolicLink(valve_port);
-        std::string main_modbus_port_resolved = resolveSymbolicLink(main_modbus_port);
+        std::string acquisition_card_port_resolved = resolveSymbolicLink(acquisition_card_port);
         
         // 如果阀控板配置的是符号链接，优先使用符号链接解析后的实际设备
         // 这样可以确保使用正确的设备，而不是让智能检测随意选择
         if (valve_port != valve_port_resolved && !valve_port_resolved.empty()) {
-            // 配置的是符号链接，检查解析后的设备是否与主设备冲突
-            if (valve_port_resolved == main_modbus_port_resolved && !valve_port_resolved.empty()) {
-                DEBUG_CORE_WARNING("Port conflict detected! Valve control port " << valve_port 
-                                  << " (" << valve_port_resolved << ") conflicts with main Modbus port " 
-                                  << main_modbus_port << " (" << main_modbus_port_resolved << ")");
+            // 配置的是符号链接，检查解析后的设备是否与采集卡冲突
+            if (valve_port_resolved == acquisition_card_port_resolved && !valve_port_resolved.empty()) {
+                DEBUG_CORE_WARNING("端口冲突检测! 阀控板端口 " << valve_port 
+                                  << " (" << valve_port_resolved << ") 与采集卡端口冲突 " 
+                                  << acquisition_card_port << " (" << acquisition_card_port_resolved << ")");
                 
                 // 尝试从智能检测中选择其他可用设备
                 if (smart_config_->isSmartDetectionEnabled()) {
@@ -569,8 +569,8 @@ bool ApplicationController::initializeValveControlProcessor() {
                     
                     for (const auto& device : detected_devices) {
                         std::string device_resolved = resolveSymbolicLink(device.device_path);
-                        // 跳过主 Modbus 设备使用的串口
-                        if (device_resolved == main_modbus_port_resolved) {
+                        // 跳过采集卡使用的串口
+                        if (device_resolved == acquisition_card_port_resolved) {
                             continue;
                         }
                         
@@ -583,23 +583,23 @@ bool ApplicationController::initializeValveControlProcessor() {
                     
                     if (!alternative_port.empty()) {
                         valve_port = alternative_port;
-                        DEBUG_CORE_LOG("Auto-selected alternative port for valve control: " << alternative_port);
+                        DEBUG_CORE_LOG("自动选择阀控板备用端口: " << alternative_port);
                     } else {
-                        DEBUG_CORE_ERROR("No alternative port available for valve control, conflict may occur!");
+                        DEBUG_CORE_ERROR("没有可用的阀控板备用端口，可能发生冲突！");
                     }
                 } else {
-                    DEBUG_CORE_ERROR("Smart detection is disabled, cannot auto-select alternative port for valve control!");
+                    DEBUG_CORE_ERROR("智能检测已禁用，无法自动选择阀控板备用端口！");
                 }
             } else {
                 // 没有冲突，使用符号链接解析后的实际设备
                 valve_port = valve_port_resolved;
-                DEBUG_CORE_LOG("Using resolved symbolic link for valve control: " << valve_port 
-                              << " (from " << valve_config.getValveControlPort() << ")");
+                DEBUG_CORE_LOG("使用解析后的符号链接作为阀控板端口: " << valve_port 
+                              << " (来自 " << valve_config.getValveControlPort() << ")");
             }
-        } else if (valve_port_resolved == main_modbus_port_resolved && !valve_port_resolved.empty()) {
+        } else if (valve_port_resolved == acquisition_card_port_resolved && !valve_port_resolved.empty()) {
             // 配置的不是符号链接，但设备冲突
-            DEBUG_CORE_WARNING("Port conflict detected! Valve control port " << valve_port 
-                              << " conflicts with main Modbus port " << main_modbus_port);
+            DEBUG_CORE_WARNING("端口冲突检测! 阀控板端口 " << valve_port 
+                              << " 与采集卡端口冲突 " << acquisition_card_port);
             
             // 尝试从智能检测中选择其他可用设备
             if (smart_config_->isSmartDetectionEnabled()) {
@@ -607,12 +607,12 @@ bool ApplicationController::initializeValveControlProcessor() {
                 std::string alternative_port = "";
                 int best_priority = -1;
                 
-                for (const auto& device : detected_devices) {
-                    std::string device_resolved = resolveSymbolicLink(device.device_path);
-                    // 跳过主 Modbus 设备使用的串口
-                    if (device_resolved == main_modbus_port_resolved) {
-                        continue;
-                    }
+                    for (const auto& device : detected_devices) {
+                        std::string device_resolved = resolveSymbolicLink(device.device_path);
+                        // 跳过采集卡使用的串口
+                        if (device_resolved == acquisition_card_port_resolved) {
+                            continue;
+                        }
                     
                     // 选择优先级最高的设备
                     if (device.priority > best_priority) {
@@ -623,12 +623,12 @@ bool ApplicationController::initializeValveControlProcessor() {
                 
                 if (!alternative_port.empty()) {
                     valve_port = alternative_port;
-                    DEBUG_CORE_LOG("Auto-selected alternative port for valve control: " << alternative_port);
+                    DEBUG_CORE_LOG("自动选择阀控板备用端口: " << alternative_port);
                 } else {
-                    DEBUG_CORE_ERROR("No alternative port available for valve control, conflict may occur!");
+                    DEBUG_CORE_ERROR("没有可用的阀控板备用端口，可能发生冲突！");
                 }
             } else {
-                DEBUG_CORE_ERROR("Smart detection is disabled, cannot auto-select alternative port for valve control!");
+                DEBUG_CORE_ERROR("智能检测已禁用，无法自动选择阀控板备用端口！");
             }
         }
         
@@ -640,41 +640,49 @@ bool ApplicationController::initializeValveControlProcessor() {
         // 优先使用配置的序列号，如果没有配置则从设备读取
         if (!valve_config.getValveControlSerialNumber().empty()) {
             valve_control_serial_number_ = valve_config.getValveControlSerialNumber();
-            DEBUG_CORE_LOG("Valve control device serial number (from config): " << valve_control_serial_number_);
+            DEBUG_CORE_LOG("阀控板设备序列号 (来自配置): " << valve_control_serial_number_);
         } else {
             valve_control_serial_number_ = getUSBSerialNumber(valve_port_resolved_final);
             if (!valve_control_serial_number_.empty()) {
-                DEBUG_CORE_LOG("Valve control device serial number (from device): " << valve_control_serial_number_);
+                DEBUG_CORE_LOG("阀控板设备序列号 (来自设备): " << valve_control_serial_number_);
             }
         }
         
-        // 将阀控板串口添加到排除列表，防止主 Modbus 设备自动切换时占用
+        // 将阀控板串口添加到排除列表，防止采集卡自动切换时占用
         smart_config_->addExcludedPort(valve_port);
         smart_config_->addExcludedPort(valve_port_resolved_final); // 同时排除解析后的路径
         
-        DEBUG_CORE_LOG("Initializing valve control processor with: port=" << valve_port 
-                      << " (resolved: " << valve_port_resolved_final << ")"
-                      << ", baud=" << valve_baud 
-                      << ", parity=" << valve_parity
-                      << ", data_bits=" << valve_data_bits
-                      << ", stop_bits=" << valve_stop_bits
-                      << ", slave_id=" << valve_slave_id);
-        DEBUG_CORE_LOG("Valve control port added to excluded ports list to prevent conflicts");
+        // 获取阀控板从站ID列表（支持多从站）
+        const auto& valve_slave_ids = valve_config.getValveControlSlaveIds();
+        std::ostringstream slave_ids_str;
+        for (size_t i = 0; i < valve_slave_ids.size(); ++i) {
+            if (i > 0) slave_ids_str << ", ";
+            slave_ids_str << valve_slave_ids[i];
+        }
+        
+        DEBUG_CORE_LOG("正在初始化阀控板处理器，参数: 端口=" << valve_port 
+                      << " (解析后: " << valve_port_resolved_final << ")"
+                      << ", 波特率=" << valve_baud 
+                      << ", 校验位=" << valve_parity
+                      << ", 数据位=" << valve_data_bits
+                      << ", 停止位=" << valve_stop_bits
+                      << ", 从站ID=" << slave_ids_str.str());
+        DEBUG_CORE_LOG("已将阀控板端口添加到排除列表以防止冲突");
 
         // 创建阀控板处理器，使用独立的串口和波特率，轮询间隔100ms
         valve_control_processor_ = std::make_unique<ValveControlProcessor>(
-            valve_port, valve_baud, valve_parity, valve_data_bits, valve_stop_bits, valve_slave_id, 100
+            valve_port, valve_baud, valve_parity, valve_data_bits, valve_stop_bits, valve_slave_ids, 100
         );
 
         if (!valve_control_processor_->initialize()) {
-            DEBUG_CORE_ERROR("Valve control processor initialization failed");
+            DEBUG_CORE_ERROR("阀控板处理器初始化失败");
             return false;
         }
 
-        DEBUG_CORE_LOG("Valve control processor initialized successfully");
+        DEBUG_CORE_LOG("阀控板处理器初始化成功");
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_ERROR("Valve control processor initialization failed: " << e.what());
+        DEBUG_CORE_ERROR("阀控板处理器初始化失败: " << e.what());
         return false;
     }
 }
@@ -685,7 +693,7 @@ bool ApplicationController::initializeJoystickManager() {
 
 #ifdef ENABLE_ROS2
         if (!joystick_manager_->initialize(enable_ros2_, ros2_node_)) {
-            DEBUG_CORE_LOG("Joystick manager initialization failed");
+            DEBUG_CORE_LOG("摇杆管理器初始化失败");
             return false;
         }
         
@@ -699,24 +707,24 @@ bool ApplicationController::initializeJoystickManager() {
             int angular_z = ros2_node_->declare_parameter("axis_mapping.angular_z", 0);
             
             joystick_manager_->setAxisMapping(linear_x, linear_y, linear_z, angular_x, angular_y, angular_z);
-            DEBUG_CORE_LOG("Joystick axis mapping configured from ROS2 parameters");
+            DEBUG_CORE_LOG("摇杆轴映射已从 ROS2 参数配置");
         }
 #else
         if (!joystick_manager_->initialize(enable_ros2_, nullptr)) {
-            DEBUG_CORE_LOG("Joystick manager initialization failed");
+            DEBUG_CORE_LOG("摇杆管理器初始化失败");
             return false;
         }
 #endif
 
         if (!joystick_manager_->start()) {
-            DEBUG_CORE_LOG("Failed to start joystick manager");
+            DEBUG_CORE_LOG("无法启动摇杆管理器");
             return false;
         }
 
-        DEBUG_CORE_LOG("Joystick manager initialized and started successfully");
+        DEBUG_CORE_LOG("摇杆管理器已初始化并成功启动");
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("Joystick manager initialization failed: " << e.what());
+        DEBUG_CORE_LOG("摇杆管理器初始化失败: " << e.what());
         return false;
     }
 }
@@ -731,7 +739,7 @@ bool ApplicationController::initializeUSBSerialDetector() {
             std::string device_path_resolved = resolveSymbolicLink(device_path);
             
             if (connected) {
-                DEBUG_CORE_LOG("USB Serial device connected: " << device_path << " (resolved: " << device_path_resolved << ")");
+                DEBUG_CORE_LOG("USB 串口设备已连接: " << device_path << " (解析后: " << device_path_resolved << ")");
                 
                 // 延迟处理，等待设备信息完全初始化
                 std::thread([this, device_path, device_path_resolved]() {
@@ -746,62 +754,81 @@ bool ApplicationController::initializeUSBSerialDetector() {
                     std::string device_serial = getUSBSerialNumber(device_path_resolved);
                     
                     // 如果当前设备序列号匹配失败，扫描所有已连接设备查找匹配的序列号
-                    bool main_modbus_matched = false;
+                    bool acquisition_card_matched = false;
                     bool valve_control_matched = false;
                     
                     // 优先使用配置的序列号进行匹配（如果配置了）
-                    // 检查是否是主 Modbus 设备重新连接
+                    // 检查是否是采集卡重新连接
                     if (modbus_client_) {
-                        std::string expected_serial = !configured_main_serial.empty() ? configured_main_serial : main_modbus_serial_number_;
+                        std::string expected_serial = !configured_main_serial.empty() ? configured_main_serial : acquisition_card_serial_number_;
                         if (!expected_serial.empty() && !device_serial.empty() && device_serial == expected_serial) {
-                            main_modbus_matched = true;
-                            DEBUG_CORE_LOG("Main Modbus USB device reconnected (serial: " << device_serial << "), triggering reconnection...");
+                            acquisition_card_matched = true;
+                            DEBUG_CORE_LOG("采集卡 USB 设备重新连接 (序列号: " << device_serial << "), 触发重连...");
                             // 更新序列号（如果从设备读取的序列号与配置不同，使用配置的序列号）
                             if (!configured_main_serial.empty()) {
-                                main_modbus_serial_number_ = configured_main_serial;
+                                acquisition_card_serial_number_ = configured_main_serial;
                             } else {
-                                main_modbus_serial_number_ = device_serial;
+                                acquisition_card_serial_number_ = device_serial;
                             }
-                            // 更新主 Modbus 端口（因为路径可能已改变）
+                            // 更新采集卡端口（因为路径可能已改变）
                             std::string current_port = smart_config_->getCurrentSerialPort();
                             if (device_path_resolved != resolveSymbolicLink(current_port)) {
-                                DEBUG_CORE_LOG("Updating main Modbus port: " << current_port << " -> " << device_path_resolved);
+                                DEBUG_CORE_LOG("更新采集卡端口: " << current_port << " -> " << device_path_resolved);
                                 smart_config_->setSerialPort(device_path_resolved);
                                 initializeModbus();
                             } else {
-                                if (modbus_client_->isAutoReconnectEnabled()) {
-                                    modbus_client_->reconnect();
-                                }
-                            }
+                    if (modbus_client_->isAutoReconnectEnabled()) {
+                        modbus_client_->reconnect();
+                    }
+                }
                         }
                     }
                     
-                    // 检查是否是阀控板设备重新连接（仅在主 Modbus 未匹配时检查，避免冲突）
-                    if (!main_modbus_matched && valve_control_processor_) {
+                    // 检查是否是阀控板设备重新连接（仅在采集卡未匹配时检查，避免冲突）
+                    if (!acquisition_card_matched && valve_control_processor_) {
                         std::string expected_serial = !configured_valve_serial.empty() ? configured_valve_serial : valve_control_serial_number_;
                         if (!expected_serial.empty() && !device_serial.empty() && device_serial == expected_serial) {
                             valve_control_matched = true;
-                            DEBUG_CORE_LOG("Valve control USB device reconnected (serial: " << device_serial << "), triggering reconnection...");
+                            DEBUG_CORE_LOG("阀控板 USB 设备重新连接 (序列号: " << device_serial << "), 触发重连...");
                             // 更新序列号（如果从设备读取的序列号与配置不同，使用配置的序列号）
                             if (!configured_valve_serial.empty()) {
                                 valve_control_serial_number_ = configured_valve_serial;
-                            } else {
+            } else {
                                 valve_control_serial_number_ = device_serial;
                             }
                             // 更新阀控板端口（因为路径可能已改变）
                             if (device_path_resolved != resolveSymbolicLink(valve_control_port_)) {
-                                DEBUG_CORE_LOG("Updating valve control port: " << valve_control_port_ << " -> " << device_path_resolved);
+                                DEBUG_CORE_LOG("更新阀控板端口: " << valve_control_port_ << " -> " << device_path_resolved);
                                 valve_control_port_ = device_path_resolved;
+                                // 更新阀控板处理器的端口（注意：不会触发采集卡重连，因为阀控板使用独立的 ModbusClient）
+                                valve_control_processor_->updatePort(device_path_resolved);
+                            } else {
+                                // 端口未改变，只需重连
+                                valve_control_processor_->reconnect();
                             }
-                            valve_control_processor_->reconnect();
                         }
                     }
                     
                     // 如果当前设备没有匹配，扫描所有已连接设备查找匹配的序列号
-                    if (smart_config_->isSmartDetectionEnabled() && (!main_modbus_matched || !valve_control_matched)) {
+                    // 注意：只在当前连接的设备没有匹配到任何设备时才扫描，避免误触发已连接设备的重连
+                    if (smart_config_->isSmartDetectionEnabled() && !acquisition_card_matched && !valve_control_matched) {
+                        // 当前设备没有匹配到采集卡或阀控板，可能是新设备或需要重新匹配的设备
+                        // 获取当前已连接的设备路径（用于排除，避免重复匹配已正常工作的设备）
+                        std::string current_acquisition_port = smart_config_->getCurrentSerialPort();
+                        std::string current_acquisition_port_resolved = resolveSymbolicLink(current_acquisition_port);
+                        std::string current_valve_port_resolved = resolveSymbolicLink(valve_control_port_);
+                        
                         auto detected_devices = smart_config_->getDetectedDevices();
                         for (const auto& device : detected_devices) {
                             std::string dev_path_resolved = resolveSymbolicLink(device.device_path);
+                            
+                            // 排除当前已连接的设备（如果设备已经连接且正常工作，不应该触发重连）
+                            if (dev_path_resolved == current_acquisition_port_resolved || 
+                                dev_path_resolved == current_valve_port_resolved ||
+                                dev_path_resolved == device_path_resolved) {
+                                continue; // 跳过已连接的设备
+                            }
+                            
                             std::string dev_serial = getUSBSerialNumber(dev_path_resolved);
                             
                             // 优先使用设备信息中的序列号
@@ -809,21 +836,21 @@ bool ApplicationController::initializeUSBSerialDetector() {
                                 dev_serial = device.serial_number;
                             }
                             
-                            // 检查主 Modbus 设备（优先匹配）
-                            if (!main_modbus_matched && modbus_client_) {
-                                std::string expected_serial = !configured_main_serial.empty() ? configured_main_serial : main_modbus_serial_number_;
+                            // 检查采集卡（优先匹配）
+                            if (!acquisition_card_matched && modbus_client_) {
+                                std::string expected_serial = !configured_main_serial.empty() ? configured_main_serial : acquisition_card_serial_number_;
                                 if (!expected_serial.empty() && !dev_serial.empty() && dev_serial == expected_serial) {
-                                    main_modbus_matched = true;
-                                    DEBUG_CORE_LOG("Main Modbus USB device found in scan (serial: " << dev_serial << ", path: " << dev_path_resolved << "), triggering reconnection...");
+                                    acquisition_card_matched = true;
+                                    DEBUG_CORE_LOG("采集卡 USB 设备在扫描中找到 (序列号: " << dev_serial << ", 路径: " << dev_path_resolved << "), 触发重连...");
                                     // 更新序列号（如果从设备读取的序列号与配置不同，使用配置的序列号）
                                     if (!configured_main_serial.empty()) {
-                                        main_modbus_serial_number_ = configured_main_serial;
+                                        acquisition_card_serial_number_ = configured_main_serial;
                                     } else {
-                                        main_modbus_serial_number_ = dev_serial;
+                                        acquisition_card_serial_number_ = dev_serial;
                                     }
                                     std::string current_port = smart_config_->getCurrentSerialPort();
                                     if (dev_path_resolved != resolveSymbolicLink(current_port)) {
-                                        DEBUG_CORE_LOG("Updating main Modbus port: " << current_port << " -> " << dev_path_resolved);
+                                        DEBUG_CORE_LOG("更新采集卡端口: " << current_port << " -> " << dev_path_resolved);
                                         smart_config_->setSerialPort(dev_path_resolved);
                                         initializeModbus();
                                     } else {
@@ -831,16 +858,16 @@ bool ApplicationController::initializeUSBSerialDetector() {
                                             modbus_client_->reconnect();
                                         }
                                     }
-                                    continue; // 主 Modbus 已匹配，跳过阀控板检查（一个设备不能同时是主 Modbus 和阀控板）
+                                    continue; // 采集卡已匹配，跳过阀控板检查（一个设备不能同时是采集卡和阀控板）
                                 }
                             }
                             
-                            // 检查阀控板设备（仅在主 Modbus 未匹配时检查，避免一个设备被同时匹配）
-                            if (!main_modbus_matched && !valve_control_matched && valve_control_processor_) {
+                            // 检查阀控板设备（仅在采集卡未匹配时检查，避免一个设备被同时匹配）
+                            if (!acquisition_card_matched && !valve_control_matched && valve_control_processor_) {
                                 std::string expected_serial = !configured_valve_serial.empty() ? configured_valve_serial : valve_control_serial_number_;
                                 if (!expected_serial.empty() && !dev_serial.empty() && dev_serial == expected_serial) {
                                     valve_control_matched = true;
-                                    DEBUG_CORE_LOG("Valve control USB device found in scan (serial: " << dev_serial << ", path: " << dev_path_resolved << "), triggering reconnection...");
+                                    DEBUG_CORE_LOG("阀控板 USB 设备在扫描中找到 (序列号: " << dev_serial << ", 路径: " << dev_path_resolved << "), 触发重连...");
                                     // 更新序列号（如果从设备读取的序列号与配置不同，使用配置的序列号）
                                     if (!configured_valve_serial.empty()) {
                                         valve_control_serial_number_ = configured_valve_serial;
@@ -848,88 +875,98 @@ bool ApplicationController::initializeUSBSerialDetector() {
                                         valve_control_serial_number_ = dev_serial;
                                     }
                                     if (dev_path_resolved != resolveSymbolicLink(valve_control_port_)) {
-                                        DEBUG_CORE_LOG("Updating valve control port: " << valve_control_port_ << " -> " << dev_path_resolved);
+                                        DEBUG_CORE_LOG("更新阀控板端口: " << valve_control_port_ << " -> " << dev_path_resolved);
                                         valve_control_port_ = dev_path_resolved;
+                                        // 更新阀控板处理器的端口（注意：不会触发采集卡重连，因为阀控板使用独立的 ModbusClient）
+                                        valve_control_processor_->updatePort(dev_path_resolved);
+                                    } else {
+                                        // 端口未改变，只需重连
+                                        valve_control_processor_->reconnect();
                                     }
-                                    valve_control_processor_->reconnect();
+                                    continue; // 阀控板已匹配，跳过后续检查
                                 }
                             }
                         }
                     }
                     
-                    // 如果序列号匹配失败，尝试路径匹配（向后兼容，但只在序列号匹配都失败时）
-                    if (!main_modbus_matched && modbus_client_) {
-                        std::string main_modbus_port = smart_config_->getCurrentSerialPort();
-                        std::string main_modbus_port_resolved = resolveSymbolicLink(main_modbus_port);
-                        if (device_path == main_modbus_port || device_path_resolved == main_modbus_port_resolved) {
-                            DEBUG_CORE_LOG("Main Modbus USB device reconnected (path match), triggering reconnection...");
-                            if (modbus_client_->isAutoReconnectEnabled()) {
-                                modbus_client_->reconnect();
-                            }
-                        }
-                    }
-                    
-                    if (!valve_control_matched && !main_modbus_matched && valve_control_processor_ && !valve_control_port_.empty()) {
-                        std::string valve_port_resolved = resolveSymbolicLink(valve_control_port_);
-                        if (device_path == valve_control_port_ || device_path_resolved == valve_port_resolved) {
-                            DEBUG_CORE_LOG("Valve control USB device reconnected (path match), triggering reconnection...");
-                            valve_control_processor_->reconnect();
-                        }
+                    // 注意：所有重连都基于序列号匹配，不再使用路径匹配
+                    // 这样可以避免设备热插拔时路径互换导致的错误匹配
+                    if (!acquisition_card_matched && !valve_control_matched) {
+                        // 如果序列号匹配都失败，说明当前设备不是采集卡或阀控板
+                        // 不进行任何操作，等待正确的设备插入
                     }
                 }).detach();
             } else {
-                DEBUG_CORE_ERROR("USB Serial device disconnected: " << device_path << " (resolved: " << device_path_resolved << ")");
+                DEBUG_CORE_ERROR("USB 串口设备已断开: " << device_path << " (解析后: " << device_path_resolved << ")");
                 
-                // 先尝试路径匹配（因为设备断开后可能无法读取序列号）
-                std::string main_modbus_port = smart_config_->getCurrentSerialPort();
-                std::string main_modbus_port_resolved = resolveSymbolicLink(main_modbus_port);
-                bool is_main_modbus = (device_path == main_modbus_port || device_path_resolved == main_modbus_port_resolved);
+                // 优先使用序列号匹配（因为路径可能会变化）
+                // 尝试获取断开设备的序列号
+                std::string device_serial = getUSBSerialNumber(device_path_resolved);
                 
-                std::string valve_port_resolved = resolveSymbolicLink(valve_control_port_);
-                bool is_valve_control = (valve_control_processor_ && !valve_control_port_.empty() && 
-                                        (device_path == valve_control_port_ || device_path_resolved == valve_port_resolved));
-                
-                // 如果路径匹配，尝试获取序列号进行确认
-                std::string device_serial = "";
-                if (is_main_modbus || is_valve_control) {
-                    // 设备刚断开，可能还能读取序列号
-                    device_serial = getUSBSerialNumber(device_path_resolved);
+                // 如果无法读取序列号，尝试路径匹配作为备选（但重连时仍然必须使用序列号）
+                bool is_acquisition_card_by_path = false;
+                bool is_valve_control_by_path = false;
+                if (device_serial.empty()) {
+                    // 无法读取序列号时，使用路径匹配作为辅助判断
+                    std::string acquisition_card_port = smart_config_->getCurrentSerialPort();
+                    std::string acquisition_card_port_resolved = resolveSymbolicLink(acquisition_card_port);
+                    is_acquisition_card_by_path = (device_path == acquisition_card_port || device_path_resolved == acquisition_card_port_resolved);
+                    
+                    std::string valve_port_resolved = resolveSymbolicLink(valve_control_port_);
+                    is_valve_control_by_path = (valve_control_processor_ && !valve_control_port_.empty() && 
+                                                (device_path == valve_control_port_ || device_path_resolved == valve_port_resolved));
                 }
                 
-                // 检查是否是主 Modbus 设备断开
-                if (modbus_client_ && (is_main_modbus || 
-                    (!main_modbus_serial_number_.empty() && !device_serial.empty() && device_serial == main_modbus_serial_number_))) {
-                    DEBUG_CORE_ERROR("Main Modbus device disconnected" << 
-                                    (device_serial.empty() ? " (path match)" : " (serial: " + device_serial + ")") << 
-                                    ", waiting for USB reconnection...");
-                    // 立即关闭Modbus连接并清除序列号（等待重新获取）
+                // 检查是否是采集卡断开（优先使用序列号，序列号不可用时使用路径）
+                bool is_acquisition_card = false;
+                if (!acquisition_card_serial_number_.empty() && !device_serial.empty()) {
+                    // 使用序列号匹配
+                    is_acquisition_card = (device_serial == acquisition_card_serial_number_);
+                } else if (device_serial.empty() && is_acquisition_card_by_path) {
+                    // 序列号不可用，使用路径匹配（但仅用于断开检测，重连时仍需要序列号）
+                    is_acquisition_card = true;
+                }
+                
+                if (modbus_client_ && is_acquisition_card) {
+                    DEBUG_CORE_ERROR("采集卡断开连接" << 
+                                    (!device_serial.empty() ? " (序列号: " + device_serial + ")" : " (路径匹配)") << 
+                                    ", 等待 USB 重新连接...");
+                    // 立即关闭Modbus连接
                     modbus_client_->close();
-                    // 不清除序列号，保留用于重连匹配
+                    // 保留序列号，用于重连匹配
                 }
                 
-                // 检查是否是阀控板设备断开
-                if (valve_control_processor_ && (is_valve_control || 
-                    (!valve_control_serial_number_.empty() && !device_serial.empty() && device_serial == valve_control_serial_number_))) {
-                    DEBUG_CORE_ERROR("Valve control device disconnected" << 
-                                    (device_serial.empty() ? " (path match)" : " (serial: " + device_serial + ")") << 
-                                    ", waiting for USB reconnection...");
+                // 检查是否是阀控板设备断开（优先使用序列号，序列号不可用时使用路径）
+                bool is_valve_control = false;
+                if (!valve_control_serial_number_.empty() && !device_serial.empty()) {
+                    // 使用序列号匹配
+                    is_valve_control = (device_serial == valve_control_serial_number_);
+                } else if (device_serial.empty() && is_valve_control_by_path) {
+                    // 序列号不可用，使用路径匹配（但仅用于断开检测，重连时仍需要序列号）
+                    is_valve_control = true;
+                }
+                
+                if (valve_control_processor_ && is_valve_control) {
+                    DEBUG_CORE_ERROR("阀控板设备断开连接" << 
+                                    (!device_serial.empty() ? " (序列号: " + device_serial + ")" : " (路径匹配)") << 
+                                    ", 等待 USB 重新连接...");
                     // 立即关闭阀控板连接
                     valve_control_processor_->close();
-                    // 不清除序列号，保留用于重连匹配
+                    // 保留序列号，用于重连匹配
                 }
             }
         });
         
         // 启动设备检测器
         if (!usb_serial_detector_->start(true)) {
-            DEBUG_CORE_LOG("Failed to start USB serial detector");
+            DEBUG_CORE_LOG("无法启动 USB 串口检测器");
             return false;
         }
         
-        DEBUG_CORE_LOG("USB Serial detector initialized and started successfully");
+        DEBUG_CORE_LOG("USB 串口检测器已初始化并成功启动");
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("USB Serial detector initialization failed: " << e.what());
+        DEBUG_CORE_LOG("USB 串口检测器初始化失败: " << e.what());
         return false;
     }
 }
@@ -945,15 +982,15 @@ void ApplicationController::onSignal(int sig) {
 }
 
 void ApplicationController::runModbusMode() {
-    DEBUG_CORE_LOG("Running in Modbus + USB joystick mode");
+    DEBUG_CORE_LOG("正在以 Modbus + USB 摇杆模式运行");
     
     const auto period = std::chrono::duration<double>(1.0 / poll_hz_);
 
     while (g_run.load(std::memory_order_relaxed)) {
         auto t0 = std::chrono::steady_clock::now();
 
-        // 处理Modbus数据
-        if (!modbus_processor_->processData()) {
+        // 处理采集卡数据
+        if (!acquisition_card_processor_->processData()) {
             // 处理失败，睡到下个周期继续尝试
             auto dt = std::chrono::steady_clock::now() - t0;
             if (dt < period) std::this_thread::sleep_for(period - dt);
@@ -974,7 +1011,7 @@ void ApplicationController::runModbusMode() {
 }
 
 void ApplicationController::runUSBOnlyMode() {
-    DEBUG_CORE_LOG("Running in USB joystick only mode");
+    DEBUG_CORE_LOG("正在以仅 USB 摇杆模式运行");
     
     while (g_run.load(std::memory_order_relaxed)) {
 #ifdef ENABLE_ROS2
@@ -992,16 +1029,16 @@ void ApplicationController::runUSBOnlyMode() {
         if (++counter >= STATUS_DISPLAY_INTERVAL_COUNT) { // 每STATUS_DISPLAY_TIME_MS显示一次状态
             counter = 0;
             int device_count = joystick_manager_->getConnectedDeviceCount();
-            DEBUG_JOYSTICK_LOG("USB joystick mode: " << device_count << " devices connected");
+            DEBUG_JOYSTICK_LOG("USB 摇杆模式: " << device_count << " 个设备已连接");
         }
     }
 }
 
 void ApplicationController::runDynamicMode() {
     if (enable_modbus_) {
-        DEBUG_CORE_LOG("Running in hot-swap single mode detection (Modbus OR USB, not both)");
+        DEBUG_CORE_LOG("正在以热插拔单模式检测运行 (Modbus 或 USB，不同时)");
     } else {
-        DEBUG_CORE_LOG("Running in USB joystick only mode (Modbus disabled)");
+        DEBUG_CORE_LOG("正在以仅 USB 摇杆模式运行 (Modbus 已禁用)");
     }
     
     const auto period = std::chrono::duration<double>(1.0 / poll_hz_);
@@ -1021,9 +1058,9 @@ void ApplicationController::runDynamicMode() {
         // 立即检测并报告Modbus连接状态变化
         if (enable_modbus_ && current_modbus_state != last_modbus_state) {
             if (current_modbus_state) {
-                DEBUG_MODBUS_COMM_LOG("🔗 ========== MODBUS CONNECTED ========== 🔗");
+                DEBUG_MODBUS_COMM_LOG("🔗 ========== 采集卡已连接 ========== 🔗");
             } else {
-                DEBUG_MODBUS_ERROR("❌ ========== MODBUS DISCONNECTED ========== ❌");
+                DEBUG_MODBUS_ERROR("❌ ========== 采集卡已断开 ========== ❌");
             }
             last_modbus_state = current_modbus_state;
         }
@@ -1040,14 +1077,14 @@ void ApplicationController::runDynamicMode() {
         
         // 检查是否需要切换模式
         if (new_mode != current_mode) {
-            DEBUG_CORE_LOG("Mode switching: " << current_mode << " -> " << new_mode);
+            DEBUG_CORE_LOG("模式切换: " << current_mode << " -> " << new_mode);
             
             // 清理当前模式资源
             cleanupCurrentMode(current_mode);
             
             // 初始化新模式资源
             if (!initializeMode(new_mode)) {
-                DEBUG_CORE_ERROR("Failed to initialize mode: " << new_mode);
+                DEBUG_CORE_ERROR("无法初始化模式: " << new_mode);
                 new_mode = "standby";
             }
             
@@ -1056,19 +1093,19 @@ void ApplicationController::runDynamicMode() {
         }
         
         if (current_usb_count != last_usb_count) {
-            DEBUG_JOYSTICK_LOG("USB joystick count changed: " << last_usb_count << " -> " << current_usb_count);
+            DEBUG_JOYSTICK_LOG("USB 摇杆数量已更改: " << last_usb_count << " -> " << current_usb_count);
             last_usb_count = current_usb_count;
         }
         
         // 根据当前模式处理数据
         bool processing_ok = true;
-        if (current_mode == "modbus" && enable_modbus_ && modbus_processor_) {
-            processing_ok = modbus_processor_->processData();
+        if (current_mode == "modbus" && enable_modbus_ && acquisition_card_processor_) {
+            processing_ok = acquisition_card_processor_->processData();
             if (!processing_ok) {
                 // 只在第一次处理失败时打印日志，避免重复刷屏
                 static bool last_processing_failed = false;
                 if (!last_processing_failed) {
-                    DEBUG_MODBUS_ERROR("Modbus processing failed, checking connection");
+                    DEBUG_MODBUS_ERROR("Modbus 处理失败，正在检查连接");
                 }
                 last_processing_failed = true;
             } else {
@@ -1141,7 +1178,7 @@ void ApplicationController::runDynamicMode() {
 }
 
 void ApplicationController::cleanupCurrentMode(const std::string& mode) {
-    DEBUG_CORE_LOG("Cleaning up mode: " << mode);
+    DEBUG_CORE_LOG("正在清理模式: " << mode);
     
     if (mode == "modbus") {
         // 清理Modbus模式资源
@@ -1160,8 +1197,8 @@ void ApplicationController::cleanupCurrentMode(const std::string& mode) {
             uinput_device_->sync();
         }
         
-        // 清理Modbus处理器
-        modbus_processor_.reset();
+        // 清理采集卡处理器
+        acquisition_card_processor_.reset();
         
         // 清理uinput设备
         uinput_device_.reset();
@@ -1169,16 +1206,16 @@ void ApplicationController::cleanupCurrentMode(const std::string& mode) {
         
     } else if (mode == "usb") {
         // USB模式不需要特殊清理，JoystickManager会自动处理
-        DEBUG_CORE_LOG("USB mode cleanup completed");
+        DEBUG_CORE_LOG("USB 模式清理完成");
         
     } else if (mode == "standby") {
         // 待机模式清理所有资源
-        DEBUG_CORE_LOG("Standby mode cleanup completed");
+        DEBUG_CORE_LOG("待机模式清理完成");
     }
 }
 
 bool ApplicationController::initializeMode(const std::string& mode) {
-    DEBUG_CORE_LOG("Initializing mode: " << mode);
+    DEBUG_CORE_LOG("正在初始化模式: " << mode);
     
     if (mode == "modbus") {
         // 暂停USB手柄数据处理
@@ -1189,7 +1226,7 @@ bool ApplicationController::initializeMode(const std::string& mode) {
         // 初始化Modbus模式
         if (!uinput_created_) {
             if (!initializeUInput()) {
-                DEBUG_UINPUT_ERROR("Failed to initialize uinput for Modbus mode");
+                DEBUG_UINPUT_ERROR("无法为 Modbus 模式初始化 uinput");
 #ifdef ENABLE_ROS2
                 // 如果启用了ROS2，即使uinput失败也可以继续运行（仅ROS2输出）
                 if (enable_ros2_) {
@@ -1206,14 +1243,14 @@ bool ApplicationController::initializeMode(const std::string& mode) {
             }
         }
         
-        if (!modbus_processor_) {
-            if (!initializeModbusProcessor()) {
-                DEBUG_CORE_ERROR("Failed to initialize Modbus processor");
+        if (!acquisition_card_processor_) {
+            if (!initializeAcquisitionCardProcessor()) {
+                DEBUG_CORE_ERROR("采集卡处理器初始化失败");
                 return false;
             }
         }
         
-        DEBUG_CORE_LOG("Modbus mode initialized successfully");
+        DEBUG_CORE_LOG("Modbus 模式初始化成功");
         return true;
         
     } else if (mode == "usb") {
@@ -1222,7 +1259,7 @@ bool ApplicationController::initializeMode(const std::string& mode) {
             joystick_manager_->resume();
         }
         
-        DEBUG_CORE_LOG("USB mode initialized successfully");
+        DEBUG_CORE_LOG("USB 模式初始化成功");
         return true;
         
     } else if (mode == "standby") {
@@ -1231,16 +1268,16 @@ bool ApplicationController::initializeMode(const std::string& mode) {
             joystick_manager_->pause();
         }
         
-        DEBUG_CORE_LOG("Standby mode initialized successfully");
+        DEBUG_CORE_LOG("待机模式初始化成功");
         return true;
     }
     
-    DEBUG_CORE_ERROR("Unknown mode: " << mode);
+    DEBUG_CORE_ERROR("未知模式: " << mode);
     return false;
 }
 
 void ApplicationController::cleanup() {
-    DEBUG_CORE_LOG("Cleaning up resources...");
+    DEBUG_CORE_LOG("正在清理资源...");
 
     // 停止手柄管理器
     if (joystick_manager_) {
@@ -1279,11 +1316,11 @@ void ApplicationController::cleanup() {
     // 清理ROS2
     if (ros2_initialized_) {
         rclcpp::shutdown();
-        DEBUG_CORE_LOG("ROS2 shutdown");
+        DEBUG_CORE_LOG("ROS2 已关闭");
     }
 #endif
 
-    DEBUG_CORE_LOG("Cleanup completed");
+    DEBUG_CORE_LOG("清理完成");
 }
 
 std::string ApplicationController::resolveSymbolicLink(const std::string& path) const {
@@ -1323,16 +1360,29 @@ std::string ApplicationController::getUSBSerialNumber(const std::string& device_
     std::string device_name = device_path.substr(device_path.find_last_of('/') + 1);
     
     // 尝试从/sys/class/tty读取USB序列号
-    std::string sys_path = "/sys/class/tty/" + device_name + "/device";
+    // USB串口设备的序列号路径：/sys/class/tty/{device}/device/../../serial
+    // 或者：/sys/class/tty/{device}/device/../serial
+    std::vector<std::string> possible_paths = {
+        "/sys/class/tty/" + device_name + "/device/../../serial",
+        "/sys/class/tty/" + device_name + "/device/../serial",
+        "/sys/class/tty/" + device_name + "/device/serial"
+    };
     
-    // 读取序列号
-    std::ifstream serial_file(sys_path + "/serial");
-    if (serial_file.is_open()) {
-        std::string serial_number;
-        std::getline(serial_file, serial_number);
-        serial_file.close();
-        if (!serial_number.empty() && serial_number != "unknown") {
-            return serial_number;
+    for (const auto& sys_path : possible_paths) {
+        std::ifstream serial_file(sys_path);
+        if (serial_file.is_open()) {
+            std::string serial_number;
+            std::getline(serial_file, serial_number);
+            serial_file.close();
+            // 去除可能的空白字符
+            if (!serial_number.empty()) {
+                // 去除首尾空白
+                serial_number.erase(0, serial_number.find_first_not_of(" \t\n\r"));
+                serial_number.erase(serial_number.find_last_not_of(" \t\n\r") + 1);
+                if (!serial_number.empty() && serial_number != "unknown") {
+                    return serial_number;
+                }
+            }
         }
     }
     
@@ -1382,13 +1432,13 @@ std::string ApplicationController::findDeviceBySerialNumber(const std::string& s
         
         // 匹配序列号
         if (!dev_serial.empty() && dev_serial == serial_number) {
-            DEBUG_CORE_LOG("Found device by serial number: " << serial_number << " -> " << device.device_path);
+            DEBUG_CORE_LOG("通过序列号找到设备: " << serial_number << " -> " << device.device_path);
             return device.device_path;
         }
     }
     
     // 未找到匹配的设备
-    DEBUG_CORE_WARNING("Device with serial number " << serial_number << " not found");
+    DEBUG_CORE_WARNING("未找到序列号为 " << serial_number << " 的设备");
     return "";
 }
 
@@ -1477,7 +1527,7 @@ void ApplicationController::publishSystemHeartbeat() {
     size_t subscription_count = heartbeat_pub->get_subscription_count();
     static size_t last_subscription_count = 0;
     if (subscription_count != last_subscription_count) {
-        DEBUG_CORE_LOG("Heartbeat subscription count changed: " << last_subscription_count << " -> " << subscription_count);
+        DEBUG_CORE_LOG("心跳订阅数量已更改: " << last_subscription_count << " -> " << subscription_count);
         last_subscription_count = subscription_count;
     }
 #endif

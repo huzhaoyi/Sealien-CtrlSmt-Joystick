@@ -129,7 +129,7 @@ void UInputDevice::setAbsRange(int code, int minv, int maxv, int fuzz, int flat,
  */
 void UInputDevice::sendAbs(int code, int value){
     if (fd_ < 0) {
-        DEBUG_UINPUT_ERROR("UInput device not initialized, cannot send axis event");
+        DEBUG_UINPUT_ERROR("UInput 设备未初始化，无法发送轴事件");
         return;
     }
     

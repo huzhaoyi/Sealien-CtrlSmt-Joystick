@@ -143,7 +143,8 @@ struct Config
   char valve_control_parity{DEFAULT_PARITY};         ///< 阀控板校验位
   int valve_control_data_bits{DEFAULT_DATA_BITS};   ///< 阀控板数据位
   int valve_control_stop_bits{DEFAULT_STOP_BITS};   ///< 阀控板停止位
-  int valve_control_slave_id{DEFAULT_SLAVE_ID};      ///< 阀控板Modbus从站ID
+  int valve_control_slave_id{DEFAULT_SLAVE_ID};      ///< 阀控板Modbus从站ID（单个值，向后兼容）
+  std::vector<int> valve_control_slave_ids{DEFAULT_SLAVE_ID}; ///< 阀控板Modbus从站ID列表（支持多从站轮询）
 
   // 系统参数
   double poll_hz{DEFAULT_POLL_HZ}; ///< 轮询频率（Hz）
@@ -201,6 +202,7 @@ struct Config
   int getValveControlDataBits() const { return valve_control_data_bits; }
   int getValveControlStopBits() const { return valve_control_stop_bits; }
   int getValveControlSlaveId() const { return valve_control_slave_id; }
+  const std::vector<int>& getValveControlSlaveIds() const { return valve_control_slave_ids; }
   
   // 调试配置访问器
   const DebugConfig& getDebugConfig() const { return debug_config; }

@@ -49,7 +49,7 @@ static bool ends_with_ci(const std::string& s, const std::string& suffix) {
 static AxisSourceKind parse_axis_src_kind(const std::string& t){
     if (t=="input_register") return AxisSourceKind::InputRegister;
     if (t=="holding_register") return AxisSourceKind::HoldingRegister;
-    throw std::runtime_error("axis source.type must be input_register/holding_register");
+    throw std::runtime_error("轴源类型必须是 input_register/holding_register");
 }
 
 /**
@@ -63,7 +63,7 @@ static ButtonSourceKind parse_btn_src_kind(const std::string& t){
     if (t=="discrete_input") return ButtonSourceKind::DiscreteInput;
     if (t=="input_register_bit") return ButtonSourceKind::InputRegisterBit;
     if (t=="holding_register_bit") return ButtonSourceKind::HoldingRegisterBit;
-    throw std::runtime_error("button/discrete source.type invalid");
+    throw std::runtime_error("按钮/离散源类型无效");
 }
 
 /**
@@ -85,7 +85,7 @@ static Config from_json(const json& j){
     // 处理智能串口检测配置
     if (c.serial_port == "auto" || c.serial_port == "smart") {
         c.serial_port = DEFAULT_SERIAL_PORT;  // 使用默认值，稍后由智能检测器更新
-        DEBUG_CONFIG_LOG("Smart serial detection enabled (auto mode)");
+        DEBUG_CONFIG_LOG("智能串口检测已启用 (自动模式)");
     }
     
     // 解析序列号（可选）
@@ -107,12 +107,12 @@ static Config from_json(const json& j){
             for (const auto& id : j["slave_id"]) {
                 int sid = id.get<int>();
                 if (sid < 1 || sid > 247) {
-                    throw std::runtime_error("slave_id invalid. expected 1-247");
+                    throw std::runtime_error("从站 ID 无效，期望值为 1-247");
                 }
                 c.slave_ids.push_back(sid);
             }
             if (c.slave_ids.empty()) {
-                throw std::runtime_error("slave_id list cannot be empty");
+                throw std::runtime_error("从站 ID 列表不能为空");
             }
             c.slave_id = c.slave_ids[0];  // 保持向后兼容
         } else {
@@ -157,8 +157,27 @@ static Config from_json(const json& j){
     if (j.contains("valve_control_stop_bits")) {
         c.valve_control_stop_bits = j["valve_control_stop_bits"].get<int>();
     }
+    // 解析阀控板从站ID：支持单个值或列表
     if (j.contains("valve_control_slave_id")) {
-        c.valve_control_slave_id = j["valve_control_slave_id"].get<int>();
+        if (j["valve_control_slave_id"].is_array()) {
+            // 列表格式：valve_control_slave_id: [1, 2]
+            c.valve_control_slave_ids.clear();
+            for (const auto& id : j["valve_control_slave_id"]) {
+                int sid = id.get<int>();
+                if (sid < 1 || sid > 247) {
+                    throw std::runtime_error("阀控从站 ID 无效，期望值为 1-247");
+                }
+                c.valve_control_slave_ids.push_back(sid);
+            }
+            if (c.valve_control_slave_ids.empty()) {
+                throw std::runtime_error("阀控从站 ID 列表不能为空");
+            }
+            c.valve_control_slave_id = c.valve_control_slave_ids[0];  // 保持向后兼容
+        } else {
+            // 单个值格式：valve_control_slave_id: 1
+            c.valve_control_slave_id = j["valve_control_slave_id"].get<int>();
+            c.valve_control_slave_ids = {c.valve_control_slave_id};  // 转换为列表
+        }
     }
 
     // 解析电压映射参数（必须通过配置文件设置）
@@ -264,13 +283,13 @@ static Config from_json(const json& j){
                 default: return false;
             }
         };
-        if (cfg.serial_port.empty()) throw std::runtime_error("serial_port is empty");
-        if (!is_std_baud(cfg.baud)) throw std::runtime_error("baud invalid. expected one of 1200/2400/4800/9600/19200/38400/57600/115200");
-        if (!(cfg.parity=='N' || cfg.parity=='E' || cfg.parity=='O')) throw std::runtime_error("parity invalid. expected N/E/O");
-        if (cfg.data_bits < MIN_DATA_BITS || cfg.data_bits > MAX_DATA_BITS) throw std::runtime_error("data_bits invalid. expected " + std::to_string(MIN_DATA_BITS) + "-" + std::to_string(MAX_DATA_BITS));
-        if (!(cfg.stop_bits==MIN_STOP_BITS || cfg.stop_bits==MAX_STOP_BITS)) throw std::runtime_error("stop_bits invalid. expected " + std::to_string(MIN_STOP_BITS) + " or " + std::to_string(MAX_STOP_BITS));
+        if (cfg.serial_port.empty()) throw std::runtime_error("串口为空");
+        if (!is_std_baud(cfg.baud)) throw std::runtime_error("波特率无效，期望值为 1200/2400/4800/9600/19200/38400/57600/115200 之一");
+        if (!(cfg.parity=='N' || cfg.parity=='E' || cfg.parity=='O')) throw std::runtime_error("校验位无效，期望值为 N/E/O");
+        if (cfg.data_bits < MIN_DATA_BITS || cfg.data_bits > MAX_DATA_BITS) throw std::runtime_error("数据位无效，期望值为 " + std::to_string(MIN_DATA_BITS) + "-" + std::to_string(MAX_DATA_BITS));
+        if (!(cfg.stop_bits==MIN_STOP_BITS || cfg.stop_bits==MAX_STOP_BITS)) throw std::runtime_error("停止位无效，期望值为 " + std::to_string(MIN_STOP_BITS) + " 或 " + std::to_string(MAX_STOP_BITS));
         // 验证从站ID（单个值和列表）
-        if (cfg.slave_id < 1 || cfg.slave_id > 247) throw std::runtime_error("slave_id invalid. expected 1-247");
+        if (cfg.slave_id < 1 || cfg.slave_id > 247) throw std::runtime_error("从站 ID 无效，期望值为 1-247");
         for (int sid : cfg.slave_ids) {
             if (sid < 1 || sid > 247) throw std::runtime_error("slave_id in list invalid. expected 1-247");
         }
@@ -336,7 +355,7 @@ Config ConfigLoader::Load(const std::string& path){
             // 处理智能串口检测配置
             if (serial_port == "auto" || serial_port == "smart") {
                 j["serial_port"] = DEFAULT_SERIAL_PORT;  // 使用默认值，稍后由智能检测器更新
-                DEBUG_CONFIG_LOG("Smart serial detection enabled (auto mode)");
+                DEBUG_CONFIG_LOG("智能串口检测已启用 (自动模式)");
             } else {
                 j["serial_port"] = serial_port;
             }
@@ -383,7 +402,7 @@ Config ConfigLoader::Load(const std::string& path){
                 // 处理智能串口检测配置
                 if (serial_port == "auto" || serial_port == "smart") {
                     j["valve_control_port"] = DEFAULT_SERIAL_PORT;  // 使用默认值，稍后由智能检测器更新
-                    DEBUG_CONFIG_LOG("Valve control: Smart serial detection enabled (auto mode)");
+                    DEBUG_CONFIG_LOG("阀控板: 智能串口检测已启用 (自动模式)");
                 } else {
                     j["valve_control_port"] = serial_port;
                 }
@@ -395,7 +414,20 @@ Config ConfigLoader::Load(const std::string& path){
             if (vc["parity"]) j["valve_control_parity"] = vc["parity"].as<std::string>();
             if (vc["data_bits"]) j["valve_control_data_bits"] = vc["data_bits"].as<int>();
             if (vc["stop_bits"]) j["valve_control_stop_bits"] = vc["stop_bits"].as<int>();
-            if (vc["slave_id"]) j["valve_control_slave_id"] = vc["slave_id"].as<int>();
+            // 解析阀控板从站ID：支持单个值或列表
+            if (vc["slave_id"]) {
+                if (vc["slave_id"].IsSequence()) {
+                    // 列表格式：slave_id: [1, 2]
+                    json slave_id_array = json::array();
+                    for (const auto& id : vc["slave_id"]) {
+                        slave_id_array.push_back(id.as<int>());
+                    }
+                    j["valve_control_slave_id"] = slave_id_array;
+                } else {
+                    // 单个值格式：slave_id: 1
+                    j["valve_control_slave_id"] = vc["slave_id"].as<int>();
+                }
+            }
         }
 
         // 解析电压映射参数（必须通过配置文件设置）

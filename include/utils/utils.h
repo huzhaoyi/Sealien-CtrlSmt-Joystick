@@ -168,102 +168,102 @@ inline std::string NowTimeString() {
 } while(0)
 
 // ============================================================================
-// Modbus分级调试打印宏（精细控制）
+// 采集卡分级调试打印宏（精细控制）
 // ============================================================================
 
 /**
- * @brief Modbus通信调试打印宏（连接、错误等）
+ * @brief 采集卡通信调试打印宏（连接、错误等）
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_COMM_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusComm()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-COMM", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-COMM", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus输入寄存器调试打印宏（模拟量输入）
+ * @brief 采集卡输入寄存器调试打印宏（模拟量输入）
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_INPUT_REG_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusInputReg()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-INPUT", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-INPUT", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus保持寄存器调试打印宏（模拟量输出）
+ * @brief 采集卡保持寄存器调试打印宏（模拟量输出）
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_HOLDING_REG_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusHoldingReg()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-HOLDING", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-HOLDING", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus线圈调试打印宏（数字输出）
+ * @brief 采集卡线圈调试打印宏（数字输出）
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_COIL_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusCoil()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-COIL", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-COIL", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus离散输入调试打印宏（数字输入）
+ * @brief 采集卡离散输入调试打印宏（数字输入）
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_DISCRETE_INPUT_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusDiscreteInput()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-DISCRETE", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-DISCRETE", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus电压转换调试打印宏（电压/电流值显示）
+ * @brief 采集卡电压转换调试打印宏（电压/电流值显示）
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_VOLTAGE_CONV_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusVoltageConv()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-VOLTAGE", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-VOLTAGE", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus写入操作调试打印宏
+ * @brief 采集卡写入操作调试打印宏
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_WRITE_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusWrite()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-WRITE", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-WRITE", oss.str()); \
     } \
 } while(0)
 
 /**
- * @brief Modbus十六进制数据帧调试打印宏
+ * @brief 采集卡十六进制数据帧调试打印宏
  * @param msg 调试消息（支持流式输出）
  */
 #define DEBUG_MODBUS_HEX_FRAME_LOG(msg) do { \
     if (DebugConfigManager::getInstance().isDebugModbusHexFrame()) { \
         std::ostringstream oss; \
         oss << msg; \
-        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS-HEX", oss.str()); \
+        ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION-HEX", oss.str()); \
     } \
 } while(0)
 
@@ -600,98 +600,130 @@ inline std::string NowTimeString() {
 // 错误和警告日志宏（模块名保持模块颜色，内容使用错误/警告颜色）
 // ============================================================================
 
-// Core模块错误和警告（线程安全版本）
+// Core模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_CORE_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugCore()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_INFO, "CORE", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_CORE_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugCore()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_INFO, "CORE", oss.str()); \
+    } \
 } while(0)
 
-// Modbus模块错误和警告（线程安全版本）
+// 采集卡模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_MODBUS_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugModbusComm()) { \
     std::ostringstream oss; \
     oss << msg; \
-    ThreadSafeLogger::getInstance().logModuleError(COLOR_MODBUS, "MODBUS", oss.str()); \
+    ThreadSafeLogger::getInstance().logModuleError(COLOR_MODBUS, "ACQUISITION", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_MODBUS_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugModbusComm()) { \
     std::ostringstream oss; \
     oss << msg; \
-    ThreadSafeLogger::getInstance().logModuleWarning(COLOR_MODBUS, "MODBUS", oss.str()); \
+    ThreadSafeLogger::getInstance().logModuleWarning(COLOR_MODBUS, "ACQUISITION", oss.str()); \
+    } \
 } while(0)
 
-// Joystick模块错误和警告（线程安全版本）
+// Joystick模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_JOYSTICK_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugJoystick()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_JOYSTICK, "JOYSTICK", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_JOYSTICK_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugJoystick()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_JOYSTICK, "JOYSTICK", oss.str()); \
+    } \
 } while(0)
 
-// ROS2模块错误和警告（线程安全版本）
+// ROS2模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_ROS2_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugROS2Comm()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_ROS2, "ROS2", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_ROS2_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugROS2Comm()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_ROS2, "ROS2", oss.str()); \
+    } \
 } while(0)
 
-// UInput模块错误和警告（线程安全版本）
+// UInput模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_UINPUT_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugUInput()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_UINPUT, "UINPUT", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_UINPUT_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugUInput()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_UINPUT, "UINPUT", oss.str()); \
+    } \
 } while(0)
 
-// Config模块错误和警告（线程安全版本）
+// Config模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_CONFIG_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugConfig()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_CONFIG, "CONFIG", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_CONFIG_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugConfig()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_CONFIG, "CONFIG", oss.str()); \
+    } \
 } while(0)
 
-// Mapping模块错误和警告（线程安全版本）
+// Mapping模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_MAPPING_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugMapping()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_WARNING, "MAPPING", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_MAPPING_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugMapping()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_WARNING, "MAPPING", oss.str()); \
+    } \
 } while(0)
 
-// Utils模块错误和警告（线程安全版本）
+// Utils模块错误和警告（线程安全版本，受debug配置控制）
 #define DEBUG_UTILS_ERROR(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugUtils()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleError(COLOR_DEBUG, "UTILS", oss.str()); \
+    } \
 } while(0)
 #define DEBUG_UTILS_WARNING(msg) do { \
+    if (DebugConfigManager::getInstance().isDebugUtils()) { \
     std::ostringstream oss; \
     oss << msg; \
     ThreadSafeLogger::getInstance().logModuleWarning(COLOR_DEBUG, "UTILS", oss.str()); \
+    } \
 } while(0)

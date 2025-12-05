@@ -40,7 +40,7 @@ uinput: false
 # 阀控板模块调试开关
 valve_control: true              # 阀控板基础调试（连接、错误等）
 valve_control_status: true       # 阀控板状态读取调试（总开关）
-valve_control_status_registers: true  # 所有寄存器原始数据（地址0-63）
+valve_control_status_registers: false  # 所有寄存器原始数据（地址0-63）
 valve_control_status_key: false   # 关键寄存器（累加器、心跳、阀状态寄存器）
 valve_control_status_current: false  # 阀电流值（地址2-21，40个阀）
 valve_control_status_sensor: false  # 传感器数据（地址22-45，24个传感器）
@@ -49,7 +49,7 @@ valve_control_status_proximity: false  # 接近开关（地址50）
 valve_control_status_env: false   # 湿度/温度/板载传感器（地址51-55）
 valve_control_status_sensor_status: false  # 传感器状态（地址61-62）
 valve_control_status_valve_status: false   # 阀状态（地址56-60，40个阀）
-valve_control_write: true        # 阀控板写入操作调试（电流设定、心跳等）
-valve_control_joystick: true      # 阀控板摇杆消息调试（接收到的摇杆值）
+valve_control_write: false        # 阀控板写入操作调试（电流设定、心跳等）
+valve_control_joystick: false      # 阀控板摇杆消息调试（接收到的摇杆值）
 
 

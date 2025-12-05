@@ -45,8 +45,9 @@ public:
      * @param stop_bits 停止位
      * @param slave_id 从站ID
      * @param bus_error_threshold 总线错误判定时间阈值（秒），范围2-60，默认2秒
+     * @param device_type 设备类型标识（用于日志区分，如"采集卡"或"阀控板"），默认为空
      */
-    ModbusClient(const std::string& port, int baud, char parity, int data_bits, int stop_bits, int slave_id, int bus_error_threshold = DEFAULT_TIMEOUT_MS / MILLISECONDS_PER_SECOND);
+    ModbusClient(const std::string& port, int baud, char parity, int data_bits, int stop_bits, int slave_id, int bus_error_threshold = DEFAULT_TIMEOUT_MS / MILLISECONDS_PER_SECOND, const std::string& device_type = "");
     
     /**
      * @brief 析构函数
@@ -307,6 +308,7 @@ private:
     
     // 串口配置参数（用于重连时重新创建上下文）
     std::string port_;
+    std::string device_type_;  ///< 设备类型标识（用于日志区分）
     int baud_;
     char parity_;
     int data_bits_;

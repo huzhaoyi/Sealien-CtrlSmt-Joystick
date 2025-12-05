@@ -3,8 +3,8 @@
  * @Date: 2025-09-08 11:29:37
  * @LastEditors: Joey.hu hu418@163.com
  * @LastEditTime: 2025-09-08 11:29:37
- * @FilePath: include/core/modbus_data_processor.h
- * @Description: Modbus数据处理器头文件
+ * @FilePath: include/communication/modbus/acquisition_card_processor.h
+ * @Description: 采集卡数据处理器头文件
  * 负责处理Modbus数据的读取、解析和转换
  * Code By SRS-HUZY Compile
  * Unauthorized copying of this file, via any medium is strictly prohibited.
@@ -47,7 +47,7 @@ struct AddressRanges {
 };
 
 /**
- * @brief Modbus数据处理器类
+ * @brief 采集卡数据处理器类
  * 
  * 该类负责：
  * - 分析配置并确定需要读取的寄存器地址范围
@@ -56,7 +56,7 @@ struct AddressRanges {
  * - 处理按钮数据转换和防抖
  * - 处理离散轴数据
  */
-class ModbusDataProcessor {
+class AcquisitionCardProcessor {
 public:
     /**
      * @brief 构造函数
@@ -65,13 +65,13 @@ public:
      * @param uinput_device uinput设备（可选，如果为nullptr则仅使用ROS2输出）
      * @param ros2_node ROS2节点（可选）
      */
-    ModbusDataProcessor(Config& config, ModbusClient& modbus_client, UInputDevice* uinput_device, 
+    AcquisitionCardProcessor(Config& config, ModbusClient& modbus_client, UInputDevice* uinput_device, 
                        rclcpp::Node::SharedPtr ros2_node = nullptr);
 
     /**
      * @brief 析构函数
      */
-    ~ModbusDataProcessor() = default;
+    ~AcquisitionCardProcessor() = default;
 
     /**
      * @brief 初始化处理器

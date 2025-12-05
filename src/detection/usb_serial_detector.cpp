@@ -54,13 +54,13 @@ bool USBSerialDetector::start(bool enable_hotplug) {
     // 执行初始扫描
     scanDevices();
 
-    DEBUG_CORE_LOG("USB Serial Detector started successfully");
+    DEBUG_CORE_LOG("USB 串口检测器已成功启动");
     return true;
 }
 
 void USBSerialDetector::stop() {
     if (!running_.load()) {
-        DEBUG_CORE_LOG("USB Serial Detector already stopped");
+        DEBUG_CORE_LOG("USB 串口检测器已停止");
         return;
     }
 
@@ -87,7 +87,7 @@ void USBSerialDetector::stop() {
     std::lock_guard<std::mutex> lock(devices_mutex_);
     devices_.clear();
 
-    DEBUG_CORE_LOG("USB Serial Detector stopped");
+    DEBUG_CORE_LOG("USB 串口检测器已停止");
 }
 
 int USBSerialDetector::scanDevices() {
@@ -105,7 +105,7 @@ int USBSerialDetector::scanDevices() {
         // 扫描/dev目录
         DIR* dir = opendir("/dev");
         if (!dir) {
-            DEBUG_CORE_LOG("Cannot open /dev directory");
+            DEBUG_CORE_LOG("无法打开 /dev 目录");
             continue;
         }
 
@@ -216,7 +216,7 @@ bool USBSerialDetector::reconnectDevice(const std::string& device_path) {
             now - info->last_reconnect_attempt).count();
         
         if (time_since_last_attempt < RECONNECT_INTERVAL_MS) {
-            DEBUG_CORE_LOG("Reconnect attempt too soon for device: " << device_path);
+            DEBUG_CORE_LOG("设备重连尝试过于频繁: " << device_path);
             return false;
         }
         
@@ -236,7 +236,7 @@ bool USBSerialDetector::reconnectDevice(const std::string& device_path) {
             info->last_seen = now;
             info->reconnect_attempts = 0; // 重置重连计数
             
-            DEBUG_CORE_LOG("Device reconnected: " << device_path);
+            DEBUG_CORE_LOG("设备已重新连接: " << device_path);
             
             if (device_callback_) {
                 device_callback_(device_path, true);
@@ -335,7 +335,7 @@ std::shared_ptr<USBSerialDeviceInfo> USBSerialDetector::readDeviceInfo(const std
     // 尝试打开设备以验证其存在
     int fd = open(device_path.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd < 0) {
-        DEBUG_CORE_LOG("Cannot open device: " << device_path << " - " << strerror(errno));
+        DEBUG_CORE_LOG("无法打开设备: " << device_path << " - " << strerror(errno));
         return info;
     }
     close(fd);
@@ -345,7 +345,7 @@ std::shared_ptr<USBSerialDeviceInfo> USBSerialDetector::readDeviceInfo(const std
     
     info->is_connected = true;
     
-    DEBUG_CORE_LOG("USB Serial device detected: " << device_path 
+    DEBUG_CORE_LOG("检测到 USB 串口设备: " << device_path 
                   << " (" << info->device_name << ")");
     
     return info;
@@ -494,7 +494,7 @@ void USBSerialDetector::autoReconnectDevices() {
                 info->last_seen = now;
                 info->reconnect_attempts = 0;
                 
-                DEBUG_CORE_LOG("Device auto-reconnected: " << path);
+                DEBUG_CORE_LOG("设备已自动重新连接: " << path);
                 
                 if (device_callback_) {
                     device_callback_(path, true);
@@ -503,8 +503,8 @@ void USBSerialDetector::autoReconnectDevices() {
                 info->reconnect_attempts++;
                 info->last_reconnect_attempt = now;
                 
-                DEBUG_CORE_LOG("Auto-reconnect attempt " << info->reconnect_attempts 
-                              << " for device: " << path);
+                DEBUG_CORE_LOG("设备自动重连尝试 " << info->reconnect_attempts 
+                              << " 次: " << path);
             }
         }
     }

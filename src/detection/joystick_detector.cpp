@@ -65,7 +65,7 @@ bool JoystickDetector::start(bool enable_hotplug) {
 
 void JoystickDetector::stop() {
     if (!running_.load()) {
-        DEBUG_JOYSTICK_LOG("Joystick detector already stopped");
+        DEBUG_JOYSTICK_LOG("摇杆检测器已停止");
         return;
     }
 
@@ -99,7 +99,7 @@ int JoystickDetector::scanDevices() {
     // 扫描/dev/input目录下的所有设备
     DIR* dir = opendir("/dev/input");
     if (!dir) {
-        DEBUG_JOYSTICK_LOG("Cannot open /dev/input directory");
+        DEBUG_JOYSTICK_LOG("无法打开 /dev/input 目录");
         return 0;
     }
 
@@ -275,11 +275,11 @@ std::shared_ptr<PhysicalJoystickInfo> JoystickDetector::readDeviceInfo(const std
         if (!vendor_str.empty()) {
             info->vendor_id = std::stoi(vendor_str, nullptr, 16);
         } else {
-            DEBUG_JOYSTICK_WARNING("Empty vendor ID for device: " << device_path);
+            DEBUG_JOYSTICK_WARNING("设备厂商 ID 为空: " << device_path);
         }
         vendor_file.close();
     } else {
-        DEBUG_JOYSTICK_WARNING("Failed to read vendor ID for device: " << device_path);
+        DEBUG_JOYSTICK_WARNING("无法读取设备厂商 ID: " << device_path);
     }
 
     // 读取产品ID
@@ -290,7 +290,7 @@ std::shared_ptr<PhysicalJoystickInfo> JoystickDetector::readDeviceInfo(const std
         if (!product_str.empty()) {
             info->product_id = std::stoi(product_str, nullptr, 16);
         } else {
-            DEBUG_JOYSTICK_WARNING("Empty product ID for device: " << device_path);
+            DEBUG_JOYSTICK_WARNING("设备产品 ID 为空: " << device_path);
         }
         product_file.close();
     } else {

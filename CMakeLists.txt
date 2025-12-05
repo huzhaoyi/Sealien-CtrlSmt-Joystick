@@ -205,7 +205,7 @@ add_executable(sealien-ctrlsmt-joystick
   # 通信模块
   src/communication/joystick/joystick_manager.cpp
   src/communication/modbus/modbus_client.cpp
-  src/communication/modbus/modbus_data_processor.cpp
+  src/communication/modbus/acquisition_card_processor.cpp
   src/communication/modbus/valve_control_processor.cpp
   
   # 输入处理模块

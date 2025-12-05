@@ -295,9 +295,9 @@ bool DebugConfigManager::loadFromFile(const std::string& config_path) {
         // 如果仍然没有找到文件，使用默认配置
         if (file_path.empty()) {
             config_.setDefaults();
-            std::cout << "[DEBUG CONFIG] No debug config file found, using default configuration" << std::endl;
-            std::cout << "[DEBUG CONFIG] Searched paths: config/debug.yaml, ./config/debug.yaml, ../config/debug.yaml, /opt/sealien-joystick/config/debug.yaml" << std::endl;
-            std::cout << "[DEBUG CONFIG] You can set SEALIEN_DEBUG_CONFIG environment variable to specify custom path" << std::endl;
+            std::cout << "[DEBUG CONFIG] 未找到调试配置文件，使用默认配置" << std::endl;
+            std::cout << "[DEBUG CONFIG] 搜索路径: config/debug.yaml, ./config/debug.yaml, ../config/debug.yaml, /opt/sealien-joystick/config/debug.yaml" << std::endl;
+            std::cout << "[DEBUG CONFIG] 可以设置 SEALIEN_DEBUG_CONFIG 环境变量来指定自定义路径" << std::endl;
             return true;  // 使用默认配置，不算错误
         }
         
@@ -306,7 +306,7 @@ bool DebugConfigManager::loadFromFile(const std::string& config_path) {
         if (!file.good()) {
             // 文件不存在，使用默认配置
             config_.setDefaults();
-            std::cout << "[DEBUG CONFIG] Debug config file not found: " << file_path << ", using default configuration" << std::endl;
+            std::cout << "[DEBUG CONFIG] 调试配置文件未找到: " << file_path << "，使用默认配置" << std::endl;
             return true;  // 使用默认配置，不算错误
         }
         file.close();
@@ -358,14 +358,14 @@ bool DebugConfigManager::loadFromFile(const std::string& config_path) {
         
         // 注意：这里不能使用DEBUG宏，因为可能还在初始化阶段
         // 使用标准输出提示配置文件已加载
-        std::cout << "[DEBUG CONFIG] Loaded debug configuration from: " << file_path << std::endl;
+        std::cout << "[DEBUG CONFIG] 已从以下路径加载调试配置: " << file_path << std::endl;
         
         return true;
         
     } catch (const std::exception& e) {
         // 加载失败，使用默认配置
         config_.setDefaults();
-        std::cout << "[DEBUG CONFIG] Failed to load debug config file, using defaults: " << e.what() << std::endl;
+        std::cout << "[DEBUG CONFIG] 无法加载调试配置文件，使用默认值: " << e.what() << std::endl;
         return false;
     }
 }

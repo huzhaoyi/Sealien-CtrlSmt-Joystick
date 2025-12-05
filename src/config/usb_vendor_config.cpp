@@ -33,7 +33,7 @@ bool USBVendorConfig::loadConfig(const std::string& config_path) {
         // 检查文件是否存在
         std::ifstream file(config_path);
         if (!file.good()) {
-            DEBUG_CORE_WARNING("USB vendor config file not found: " << config_path << ", using default config");
+            DEBUG_CORE_WARNING("USB 厂商配置文件未找到: " << config_path << "，使用默认配置");
             return true; // 使用默认配置
         }
         file.close();
@@ -56,15 +56,15 @@ bool USBVendorConfig::loadConfig(const std::string& config_path) {
             parseFilterRulesConfig(config["device_filters"]);
         }
         
-        DEBUG_CORE_LOG("USB vendor config loaded successfully from: " << config_path);
-        DEBUG_CORE_LOG("Loaded " << vendors_.size() << " vendors, " 
-                      << match_rules_.size() << " match rules, " 
+        DEBUG_CORE_LOG("USB 厂商配置已成功从以下路径加载: " << config_path);
+        DEBUG_CORE_LOG("已加载 " << vendors_.size() << " 个厂商, " 
+                      << match_rules_.size() << " 个匹配规则, " 
                       << filter_rules_.size() << " filter rules");
         
         return true;
         
     } catch (const std::exception& e) {
-        DEBUG_CORE_ERROR("Failed to load USB vendor config: " << e.what());
+        DEBUG_CORE_ERROR("无法加载 USB 厂商配置: " << e.what());
         return false;
     }
 }
@@ -250,7 +250,7 @@ void USBVendorConfig::initializeDefaultConfig() {
     ftdi_rule.enabled = true;
     match_rules_.push_back(ftdi_rule);
     
-    DEBUG_CORE_LOG("Default USB vendor config initialized");
+    DEBUG_CORE_LOG("默认 USB 厂商配置已初始化");
 }
 
 void USBVendorConfig::parseVendorsConfig(const YAML::Node& vendors_node) {

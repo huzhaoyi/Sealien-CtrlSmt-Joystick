@@ -21,13 +21,15 @@
 #include <mutex>
 #include <iomanip>
 #include <sstream>
+#include <map>
 
 #ifdef ENABLE_ROS2
 #include <sensor_msgs/msg/joy.hpp>
 #endif
 
-ValveControlProcessor::ValveControlProcessor(const std::string& port, int baud, char parity, int data_bits, int stop_bits, int slave_id, int poll_interval_ms)
-    : poll_interval_ms_(poll_interval_ms) {
+ValveControlProcessor::ValveControlProcessor(const std::string& port, int baud, char parity, int data_bits, int stop_bits, const std::vector<int>& slave_ids, int poll_interval_ms)
+    : poll_interval_ms_(poll_interval_ms), slave_ids_(slave_ids),
+      port_(port), baud_(baud), parity_(parity), data_bits_(data_bits), stop_bits_(stop_bits) {
     status_.valve_status.resize(VALVE_COUNT, 0);
     last_valve_currents_.resize(VALVE_COUNT, -1); // 初始化为-1，确保第一次写入
     status_.valid = false;
@@ -35,9 +37,19 @@ ValveControlProcessor::ValveControlProcessor(const std::string& port, int baud, 
     last_joystick_axes_.resize(VALVE_COUNT, 0.0f);
 #endif
     
-    // 创建独立的Modbus客户端
+    // 验证从站ID列表
+    if (slave_ids.empty()) {
+        throw std::runtime_error("ValveControlProcessor: 从站 ID 列表不能为空");
+    }
+    for (int sid : slave_ids) {
+        if (sid < 1 || sid > 247) {
+            throw std::runtime_error("ValveControlProcessor: 无效的从站 ID " + std::to_string(sid) + " (必须为 1-247)");
+        }
+    }
+    
+    // 创建独立的Modbus客户端（使用第一个从站ID初始化，并指定设备类型为"阀控板"）
     modbus_client_ = std::make_unique<ModbusClient>(
-        port, baud, parity, data_bits, stop_bits, slave_id, 2  // bus_error_threshold默认2秒
+        port, baud, parity, data_bits, stop_bits, slave_ids[0], 2, "阀控板"  // bus_error_threshold默认2秒，设备类型为"阀控板"
     );
     
     // 启用自动重连功能
@@ -46,15 +58,15 @@ ValveControlProcessor::ValveControlProcessor(const std::string& port, int baud, 
 
 bool ValveControlProcessor::initialize() {
     if (!modbus_client_) {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Modbus client not created");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: Modbus 客户端未创建");
         return false;
     }
     
     // 连接Modbus
     if (!modbus_client_->connect()) {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Initial connection failed, auto-reconnect enabled");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 初始连接失败，已启用自动重连");
     } else {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor initialized and connected");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器已初始化并连接");
     }
     
     return true;
@@ -79,10 +91,11 @@ bool ValveControlProcessor::pollValveStatus() {
     
     last_poll_time_ = now;
     
-    // 更新心跳值（每次发送不同的心跳值，使用时间戳的低16位）
-    static uint16_t heartbeat_counter = 0;
-    heartbeat_counter++;
-    setHeartbeat(heartbeat_counter);
+    // 在多从站模式下，临时禁用自动更新总线错误状态，由外层统一处理
+    bool original_auto_update = modbus_client_->isAutoUpdateBusError();
+    if (slave_ids_.size() > 1) {
+        modbus_client_->setAutoUpdateBusError(false);
+    }
     
     // 读取地址0-132的所有保持寄存器（共133个寄存器）
     // 使用功能码03（读保持寄存器）
@@ -96,45 +109,146 @@ bool ValveControlProcessor::pollValveStatus() {
     std::vector<uint16_t> all_regs;
     all_regs.resize(REG_COUNT, 0);  // 初始化为0
     
-    // 第一次读取：地址0-124
-    std::vector<uint16_t> first_batch;
-    first_batch.resize(FIRST_BATCH_COUNT);
-    if (!modbus_client_ || !modbus_client_->readHoldingRange(REG_START, FIRST_BATCH_COUNT, first_batch)) {
+    // 存储每个从站的数据（使用从站ID作为键）
+    std::map<int, std::vector<uint16_t>> slave_regs_map;
+    
+    // 轮询所有从站
+    int success_count = 0;
+    int fail_count = 0;
+    std::vector<int> failed_slave_ids;
+    
+    for (int slave_id : slave_ids_) {
+        // 切换从站ID
+        if (!modbus_client_->setSlaveId(slave_id)) {
+            if (slave_ids_.size() > 1) {
+                failed_slave_ids.push_back(slave_id);
+            } else {
+                DEBUG_VALVE_CONTROL_LOG("错误: 无法设置从站 ID 为 " << slave_id);
+            }
+            fail_count++;
+            continue;
+        }
+        
+        // 第一次读取：地址0-124
+        std::vector<uint16_t> first_batch;
+        first_batch.resize(FIRST_BATCH_COUNT);
+        if (!modbus_client_ || !modbus_client_->readHoldingRange(REG_START, FIRST_BATCH_COUNT, first_batch)) {
+            if (slave_ids_.size() > 1) {
+                failed_slave_ids.push_back(slave_id);
+                fail_count++;
+                continue;
+            } else {
+                std::lock_guard<std::mutex> lock(status_mutex_);
+                status_.valid = false;
+                last_error_ = "从从站 " + std::to_string(slave_id) + " 读取保持寄存器失败 (地址=0-124, 功能码03)";
+                DEBUG_VALVE_CONTROL_LOG("错误: " + last_error_);
+                if (slave_ids_.size() > 1) {
+                    modbus_client_->setAutoUpdateBusError(original_auto_update);
+                }
+                return false;
+            }
+        }
+        
+        // 第二次读取：地址125-132
+        std::vector<uint16_t> second_batch;
+        second_batch.resize(SECOND_BATCH_COUNT);
+        if (!modbus_client_ || !modbus_client_->readHoldingRange(SECOND_BATCH_START, SECOND_BATCH_COUNT, second_batch)) {
+            if (slave_ids_.size() > 1) {
+                failed_slave_ids.push_back(slave_id);
+                fail_count++;
+                continue;
+            } else {
+                std::lock_guard<std::mutex> lock(status_mutex_);
+                status_.valid = false;
+                last_error_ = "从从站 " + std::to_string(slave_id) + " 读取保持寄存器失败 (地址=125-132, 功能码03)";
+                DEBUG_VALVE_CONTROL_LOG("错误: " + last_error_);
+                if (slave_ids_.size() > 1) {
+                    modbus_client_->setAutoUpdateBusError(original_auto_update);
+                }
+                return false;
+            }
+        }
+        
+        // 合并该从站的数据
+        std::vector<uint16_t> slave_regs;
+        slave_regs.resize(REG_COUNT, 0);
+        for (int i = 0; i < FIRST_BATCH_COUNT && i < static_cast<int>(slave_regs.size()); ++i) {
+            slave_regs[i] = first_batch[i];
+        }
+        for (int i = 0; i < SECOND_BATCH_COUNT && (SECOND_BATCH_START + i) < static_cast<int>(slave_regs.size()); ++i) {
+            slave_regs[SECOND_BATCH_START + i] = second_batch[i];
+        }
+        
+        slave_regs_map[slave_id] = slave_regs;
+        success_count++;
+    }
+    
+    // 恢复自动更新总线错误状态
+    if (slave_ids_.size() > 1) {
+        modbus_client_->setAutoUpdateBusError(original_auto_update);
+        
+        // 打印多从站模式下的统计信息
+        if (!failed_slave_ids.empty()) {
+            std::ostringstream failed_oss;
+            failed_oss << "警告: 从 " << failed_slave_ids.size() << " 个从站读取失败: ";
+            for (size_t i = 0; i < failed_slave_ids.size(); ++i) {
+                if (i > 0) failed_oss << ", ";
+                failed_oss << failed_slave_ids[i];
+            }
+            DEBUG_VALVE_CONTROL_LOG(failed_oss.str());
+        }
+        
+        // 如果所有从站都失败，返回失败
+        if (fail_count == static_cast<int>(slave_ids_.size())) {
+            std::lock_guard<std::mutex> lock(status_mutex_);
+            status_.valid = false;
+            last_error_ = "所有从站读取失败";
+            return false;
+        }
+        
+        // 如果至少有一个从站成功，使用第一个成功的从站数据（或合并所有从站数据）
+        // 这里简化处理：使用第一个从站的数据
+        if (!slave_regs_map.empty()) {
+            all_regs = slave_regs_map.begin()->second;
+        } else {
+            std::lock_guard<std::mutex> lock(status_mutex_);
+            status_.valid = false;
+            last_error_ = "所有从站都没有有效数据";
+            return false;
+        }
+    } else {
+        // 单从站模式：已经在上面的循环中读取了数据，直接使用
+        if (slave_regs_map.empty()) {
         std::lock_guard<std::mutex> lock(status_mutex_);
         status_.valid = false;
-        last_error_ = "Failed to read holding registers (addr=0-124) using function code 03";
-        DEBUG_VALVE_CONTROL_LOG("Error: " + last_error_);
+            last_error_ = "从从站读取失败";
         return false;
+        }
+        all_regs = slave_regs_map.begin()->second;
     }
     
-    // 复制第一批数据
-    for (int i = 0; i < FIRST_BATCH_COUNT && i < static_cast<int>(all_regs.size()); ++i) {
-        all_regs[i] = first_batch[i];
-    }
-    
-    // 第二次读取：地址125-132
-    std::vector<uint16_t> second_batch;
-    second_batch.resize(SECOND_BATCH_COUNT);
-    if (!modbus_client_ || !modbus_client_->readHoldingRange(SECOND_BATCH_START, SECOND_BATCH_COUNT, second_batch)) {
-        std::lock_guard<std::mutex> lock(status_mutex_);
-        status_.valid = false;
-        last_error_ = "Failed to read holding registers (addr=125-132) using function code 03";
-        DEBUG_VALVE_CONTROL_LOG("Error: " + last_error_);
-        return false;
-    }
-    
-    // 复制第二批数据
-    for (int i = 0; i < SECOND_BATCH_COUNT && (SECOND_BATCH_START + i) < static_cast<int>(all_regs.size()); ++i) {
-        all_regs[SECOND_BATCH_START + i] = second_batch[i];
+    // 更新心跳值（每次发送不同的心跳值，使用时间戳的低16位）
+    static uint16_t heartbeat_counter = 0;
+    heartbeat_counter++;
+    // 为所有从站设置心跳（使用第一个从站ID）
+    if (!slave_ids_.empty()) {
+        int current_slave = modbus_client_->getSlaveId();
+        if (modbus_client_->setSlaveId(slave_ids_[0])) {
+            setHeartbeat(heartbeat_counter);
+            // 恢复原来的从站ID（如果有多个从站）
+            if (slave_ids_.size() > 1 && current_slave != slave_ids_[0]) {
+                modbus_client_->setSlaveId(current_slave);
+            }
+        }
     }
     
     // 验证读取的数据大小
     if (all_regs.size() < REG_COUNT) {
         std::lock_guard<std::mutex> lock(status_mutex_);
         status_.valid = false;
-        last_error_ = "Incomplete data read: expected " + std::to_string(REG_COUNT) 
-                     + " registers, got " + std::to_string(all_regs.size());
-        DEBUG_VALVE_CONTROL_LOG("Error: " + last_error_);
+        last_error_ = "数据读取不完整: 期望 " + std::to_string(REG_COUNT) 
+                     + " 个寄存器，实际得到 " + std::to_string(all_regs.size()) + " 个";
+        DEBUG_VALVE_CONTROL_LOG("错误: " + last_error_);
         return false;
     }
     
@@ -151,7 +265,7 @@ bool ValveControlProcessor::pollValveStatus() {
             status_regs[i] = all_regs[reg_addr];
         } else {
             status_regs[i] = 0;  // 超出范围时设为0
-            DEBUG_VALVE_CONTROL_LOG("Warning: Register address " << reg_addr << " out of range");
+            DEBUG_VALVE_CONTROL_LOG("警告: 寄存器地址 " << reg_addr << " 超出范围");
         }
     }
     
@@ -167,12 +281,12 @@ bool ValveControlProcessor::pollValveStatus() {
     }
     
     // 打印接收到的状态数据（详细信息）
-    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("========== Valve Control Status ==========");
-    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("Accumulator (addr 0): " << accumulator);
-    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("Heartbeat (addr 63): " << heartbeat);
+    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("========== 阀控板状态 ==========");
+    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("累加器 (地址 0): " << accumulator);
+    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("心跳 (地址 63): " << heartbeat);
     
     // 打印所有寄存器数据（地址0-132），使用紧凑格式
-    DEBUG_VALVE_CONTROL_STATUS_REGISTERS_LOG("--- All Registers (0-132) ---");
+    DEBUG_VALVE_CONTROL_STATUS_REGISTERS_LOG("--- 所有寄存器 (0-132) ---");
     
     // 1. 系统寄存器 (0-1) - 单行显示
     DEBUG_VALVE_CONTROL_STATUS_REGISTERS_LOG("  [00-01] 累加器=" << all_regs[0] 
@@ -351,7 +465,7 @@ bool ValveControlProcessor::pollValveStatus() {
     }
     
     // 打印关键寄存器说明
-    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("--- Key Registers ---");
+    DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("--- 关键寄存器 ---");
     DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("  [00] Accumulator: " << all_regs[0] << " (每1s+1，用于判断故障)");
     DEBUG_VALVE_CONTROL_STATUS_KEY_LOG("  [01] PCB Status: " << all_regs[1] << " (预留)");
     if (all_regs.size() > 2) {
@@ -523,8 +637,8 @@ bool ValveControlProcessor::setValveCurrent(int valve_index, double joystick_val
     }
     
     if (valve_index < 0 || valve_index >= VALVE_COUNT) {
-        last_error_ = "Invalid valve index: " + std::to_string(valve_index);
-        DEBUG_VALVE_CONTROL_LOG("Error: " + last_error_);
+        last_error_ = "无效的阀索引: " + std::to_string(valve_index);
+        DEBUG_VALVE_CONTROL_LOG("错误: " + last_error_);
         return false;
     }
     
@@ -544,20 +658,48 @@ bool ValveControlProcessor::setValveCurrent(int valve_index, double joystick_val
     // 使用reinterpret_cast将int16_t按位转换为uint16_t（保持二进制表示）
     uint16_t reg_value = *reinterpret_cast<uint16_t*>(&current_value);
     
+    // 在多从站模式下，为所有从站写入相同的值
+    bool all_success = true;
+    int original_slave_id = modbus_client_->getSlaveId();
+    
+    for (int slave_id : slave_ids_) {
+        if (!modbus_client_->setSlaveId(slave_id)) {
+            if (slave_ids_.size() > 1) {
+                DEBUG_VALVE_CONTROL_LOG("警告: 无法为阀 " << (valve_index + 1) << " 设置从站 ID 为 " << slave_id);
+            } else {
+                last_error_ = "无法设置从站 ID 为 " + std::to_string(slave_id);
+                DEBUG_VALVE_CONTROL_WRITE_LOG("错误: " + last_error_);
+            }
+            all_success = false;
+            continue;
+        }
+    
     if (!modbus_client_ || !modbus_client_->writeSingleRegister(reg_addr, reg_value)) {
-        last_error_ = "Failed to write valve current for valve " + std::to_string(valve_index + 1);
-        DEBUG_VALVE_CONTROL_WRITE_LOG("Error: " + last_error_);
-        return false;
+            if (slave_ids_.size() > 1) {
+                DEBUG_VALVE_CONTROL_LOG("警告: 无法向从站 " << slave_id << " 写入阀 " << (valve_index + 1));
+            } else {
+                last_error_ = "无法写入阀 " + std::to_string(valve_index + 1) + " 的电流值";
+                DEBUG_VALVE_CONTROL_WRITE_LOG("错误: " + last_error_);
+            }
+            all_success = false;
+        }
     }
     
-    // 更新缓存
-    last_valve_currents_[valve_index] = current_value;
+    // 恢复原来的从站ID
+    if (slave_ids_.size() > 1) {
+        modbus_client_->setSlaveId(original_slave_id);
+    }
     
-    DEBUG_VALVE_CONTROL_WRITE_LOG("Set valve " << (valve_index + 1) 
-                                  << " to " << current_value 
+    // 更新缓存（只要有一个成功就更新）
+    if (all_success || slave_ids_.size() == 1) {
+    last_valve_currents_[valve_index] = current_value;
+    }
+    
+    DEBUG_VALVE_CONTROL_WRITE_LOG("设置阀 " << (valve_index + 1) 
+                                  << " 为 " << current_value 
                                   << " (joystick=" << std::fixed << std::setprecision(3) << joystick_value << ")");
     
-    return true;
+    return all_success;
 }
 
 bool ValveControlProcessor::setValveCurrents(const std::vector<double>& joystick_values) {
@@ -578,14 +720,40 @@ bool ValveControlProcessor::setHeartbeat(uint16_t heartbeat_value) {
         return false;
     }
     
-    if (!modbus_client_ || !modbus_client_->writeSingleRegister(HEARTBEAT_REG, heartbeat_value)) {
-        last_error_ = "Failed to write heartbeat register";
-        DEBUG_VALVE_CONTROL_WRITE_LOG("Error: " + last_error_);
-        return false;
+    // 在多从站模式下，为所有从站设置心跳
+    bool all_success = true;
+    int original_slave_id = modbus_client_->getSlaveId();
+    
+    for (int slave_id : slave_ids_) {
+        if (!modbus_client_->setSlaveId(slave_id)) {
+            if (slave_ids_.size() > 1) {
+                DEBUG_VALVE_CONTROL_LOG("警告: 无法为心跳设置从站 ID 为 " << slave_id);
+            } else {
+                last_error_ = "无法设置从站 ID 为 " + std::to_string(slave_id);
+                DEBUG_VALVE_CONTROL_WRITE_LOG("错误: " + last_error_);
+            }
+            all_success = false;
+            continue;
+        }
+        
+        if (!modbus_client_ || !modbus_client_->writeSingleRegister(HEARTBEAT_REG, heartbeat_value)) {
+            if (slave_ids_.size() > 1) {
+                DEBUG_VALVE_CONTROL_LOG("警告: 无法向从站 " << slave_id << " 写入心跳寄存器");
+            } else {
+                last_error_ = "无法写入心跳寄存器";
+                DEBUG_VALVE_CONTROL_WRITE_LOG("错误: " + last_error_);
+            }
+            all_success = false;
+        }
+    }
+    
+    // 恢复原来的从站ID
+    if (slave_ids_.size() > 1) {
+        modbus_client_->setSlaveId(original_slave_id);
     }
     
     // DEBUG_VALVE_CONTROL_WRITE_LOG("Set heartbeat to " << heartbeat_value);
-    return true;
+    return all_success;
 }
 
 bool ValveControlProcessor::isConnected() const {
@@ -598,22 +766,23 @@ std::string ValveControlProcessor::getLastError() const {
 
 bool ValveControlProcessor::reconnect() {
     if (!modbus_client_) {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Modbus client not created, cannot reconnect");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: Modbus 客户端未创建，无法重连");
         return false;
     }
     
     if (!modbus_client_->isAutoReconnectEnabled()) {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Auto-reconnect is disabled");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 自动重连已禁用");
         return false;
     }
     
-    DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Triggering reconnection...");
+    DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 触发重连 (端口: " << port_ << ")");
+    // 注意：ModbusClient 内部的日志会显示 [ACQUISITION-COMM] 标签，但这是阀控板的重连
     bool success = modbus_client_->reconnect();
     
     if (success) {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Reconnection successful");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 重连成功 (端口: " << port_ << ")");
     } else {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Reconnection failed, will retry automatically");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 重连失败，将自动重试 (端口: " << port_ << ")");
     }
     
     return success;
@@ -621,8 +790,50 @@ bool ValveControlProcessor::reconnect() {
 
 void ValveControlProcessor::close() {
     if (modbus_client_) {
-        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Closing connection...");
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 正在关闭连接...");
         modbus_client_->close();
+    }
+}
+
+bool ValveControlProcessor::updatePort(const std::string& new_port) {
+    if (!modbus_client_) {
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: Modbus 客户端未创建，无法更新端口");
+        return false;
+    }
+    
+    // 如果新端口与当前端口相同，不需要更新
+    if (new_port == port_) {
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 端口未改变 (" << new_port << ")，跳过更新");
+        return true;
+    }
+    
+    // 关闭当前连接
+    modbus_client_->close();
+    
+    // 获取当前的从站ID和自动重连设置
+    int slave_id = modbus_client_->getSlaveId();
+    bool auto_reconnect_enabled = modbus_client_->isAutoReconnectEnabled();
+    
+    // 更新端口参数
+    port_ = new_port;
+    
+    // 重新创建 ModbusClient 使用新端口（指定设备类型为"阀控板"）
+    modbus_client_ = std::make_unique<ModbusClient>(
+        port_, baud_, parity_, data_bits_, stop_bits_, slave_id, 2, "阀控板"
+    );
+    
+    // 恢复自动重连设置
+    if (auto_reconnect_enabled) {
+        modbus_client_->enableAutoReconnect(true, MODBUS_AUTO_RECONNECT_INTERVAL_MS, MODBUS_AUTO_RECONNECT_MAX_ATTEMPTS);
+    }
+    
+    // 尝试连接
+    if (modbus_client_->connect()) {
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 端口已更新为 " << new_port << " 并连接成功");
+        return true;
+    } else {
+        DEBUG_VALVE_CONTROL_LOG("阀控板处理器: 端口已更新为 " << new_port << " 但连接失败，自动重连将重试");
+        return false;
     }
 }
 
@@ -826,7 +1037,7 @@ void ValveControlProcessor::setROS2Node(rclcpp::Node::SharedPtr ros2_node) {
         joy_sub_ = ros2_node_->create_subscription<sensor_msgs::msg::Joy>(
             ROS2_TOPIC_JOY, 10,
             std::bind(&ValveControlProcessor::joyCallback, this, std::placeholders::_1));
-        DEBUG_VALVE_CONTROL_LOG("Subscribed to ROS2 joystick topic: " << ROS2_TOPIC_JOY);
+        DEBUG_VALVE_CONTROL_LOG("已订阅 ROS2 摇杆话题: " << ROS2_TOPIC_JOY);
     }
 }
 
@@ -840,7 +1051,7 @@ void ValveControlProcessor::joyCallback(const sensor_msgs::msg::Joy::SharedPtr m
     
     // 打印接收到的摇杆消息（单行输出，只打印axes）
     std::ostringstream axes_oss;
-    axes_oss << "Received joystick axes: [";
+    axes_oss << "接收到摇杆轴: [";
     for (size_t i = 0; i < msg->axes.size() && i < static_cast<size_t>(VALVE_COUNT); ++i) {
         if (i > 0) axes_oss << ", ";
         axes_oss << std::fixed << std::setprecision(3) << msg->axes[i];

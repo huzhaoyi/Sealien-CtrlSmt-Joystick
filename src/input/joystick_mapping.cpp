@@ -246,10 +246,10 @@ bool JoystickMappingManager::removeMappingConfig(uint16_t vendor_id, uint16_t pr
         auto config = it->second;
         device_mappings_.erase(config->device_name);
         id_mappings_.erase(it);
-        DEBUG_MAPPING_LOG("Removed mapping config for vendor=" << vendor_id << " product=" << product_id);
+        DEBUG_MAPPING_LOG("已移除映射配置: vendor=" << vendor_id << " product=" << product_id);
         return true;
     }
-    DEBUG_MAPPING_LOG("Mapping config not found for vendor=" << vendor_id << " product=" << product_id);
+    DEBUG_MAPPING_LOG("未找到映射配置: vendor=" << vendor_id << " product=" << product_id);
     return false;
 }
 
@@ -288,15 +288,15 @@ bool JoystickMappingManager::validateMappingConfig(const JoystickMappingConfig& 
     // 检查轴映射的有效性
     for (const auto& axis : config.axis_mappings) {
         if (axis.physical_axis_index < 0 || axis.physical_axis_index >= MAX_JOYSTICK_AXES) {
-            DEBUG_MAPPING_ERROR("Invalid axis index: " << axis.physical_axis_index);
+            DEBUG_MAPPING_ERROR("无效的轴索引: " << axis.physical_axis_index);
             return false;
         }
         if (axis.deadzone < 0.0 || axis.deadzone > 0.5) {
-            DEBUG_MAPPING_ERROR("Invalid deadzone value: " << axis.deadzone);
+            DEBUG_MAPPING_ERROR("无效的死区值: " << axis.deadzone);
             return false;
         }
         if (axis.scale_factor <= 0.0) {
-            DEBUG_MAPPING_ERROR("Invalid scale factor: " << axis.scale_factor);
+            DEBUG_MAPPING_ERROR("无效的缩放因子: " << axis.scale_factor);
             return false;
         }
     }
@@ -304,11 +304,11 @@ bool JoystickMappingManager::validateMappingConfig(const JoystickMappingConfig& 
     // 检查按钮映射的有效性
     for (const auto& button : config.button_mappings) {
         if (button.physical_button_index < 0 || button.physical_button_index >= MAX_JOYSTICK_BUTTONS) {
-            DEBUG_MAPPING_ERROR("Invalid button index: " << button.physical_button_index);
+            DEBUG_MAPPING_ERROR("无效的按钮索引: " << button.physical_button_index);
             return false;
         }
         if (button.debounce_ms < 0 || button.debounce_ms > 1000) {
-            DEBUG_MAPPING_ERROR("Invalid debounce value: " << button.debounce_ms);
+            DEBUG_MAPPING_ERROR("无效的防抖值: " << button.debounce_ms);
             return false;
         }
     }

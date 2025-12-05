@@ -211,16 +211,16 @@ static void print_modbus_write_response_hex(int slave_id, uint8_t function_code,
  * @param slave_id 从站ID
  * @param bus_error_threshold 总线错误判定时间阈值（秒）
  */
-ModbusClient::ModbusClient(const std::string& port, int baud, char parity, int data_bits, int stop_bits, int slave_id, int bus_error_threshold)
+ModbusClient::ModbusClient(const std::string& port, int baud, char parity, int data_bits, int stop_bits, int slave_id, int bus_error_threshold, const std::string& device_type)
     : bus_error_threshold_(std::clamp(bus_error_threshold, 2, 60)), 
       consecutive_errors_(0), 
       bus_error_detected_(false),
-      port_(port), baud_(baud), parity_(parity), 
+      port_(port), device_type_(device_type), baud_(baud), parity_(parity), 
       data_bits_(data_bits), stop_bits_(stop_bits), slave_id_(slave_id) {
     // 创建Modbus RTU上下文
     ctx_ = modbus_new_rtu(port.c_str(), baud, parity, data_bits, stop_bits);
     if (!ctx_) {
-        DEBUG_MODBUS_ERROR("modbus_new_rtu failed");
+        DEBUG_MODBUS_ERROR("modbus_new_rtu 失败");
         return;
     }
     
@@ -251,12 +251,12 @@ ModbusClient::~ModbusClient(){
  */
 bool ModbusClient::connect(){
     if (!ctx_) {
-        DEBUG_MODBUS_ERROR("Modbus context not initialized");
+        DEBUG_MODBUS_ERROR("Modbus 上下文未初始化");
         return false;
     }
     
     if (modbus_connect(ctx_) == -1) {
-        DEBUG_MODBUS_ERROR("modbus_connect failed: " << modbus_strerror(errno));
+        DEBUG_MODBUS_ERROR("modbus_connect 失败: " << modbus_strerror(errno));
         return false;
     }
     connected_ = true;
@@ -282,20 +282,20 @@ void ModbusClient::close(){
  */
 bool ModbusClient::readInputRange(int addr, int count, std::vector<uint16_t>& out){
     out.resize(count);
-    DEBUG_MODBUS_INPUT_REG_LOG("Slave[" << slave_id_ << "] -> Sending: read_input_registers addr=" << addr << " count=" << count);
+    DEBUG_MODBUS_INPUT_REG_LOG("从站[" << slave_id_ << "] -> 发送: 读输入寄存器 addr=" << addr << " count=" << count);
     print_modbus_read_request_hex(slave_id_, 0x04, addr, count);  // 功能码0x04: 读输入寄存器
     int rc = modbus_read_input_registers(ctx_, addr, count, out.data());
     bool success = (rc == count);
     
     // 如果读取失败且启用了自动重连，尝试重连
     if (!success && auto_reconnect_enabled_.load()) {
-        DEBUG_MODBUS_INPUT_REG_LOG("Slave[" << slave_id_ << "] read failed, attempting reconnect...");
+        DEBUG_MODBUS_INPUT_REG_LOG("从站[" << slave_id_ << "] 读取失败，正在尝试重连...");
         if (reconnect()) {
             // 重连成功，重试读取
             rc = modbus_read_input_registers(ctx_, addr, count, out.data());
             success = (rc == count);
             if (success) {
-                DEBUG_MODBUS_INPUT_REG_LOG("Slave[" << slave_id_ << "] read successful after reconnect");
+                DEBUG_MODBUS_INPUT_REG_LOG("从站[" << slave_id_ << "] 重连后读取成功");
             }
         }
     }
@@ -305,10 +305,10 @@ bool ModbusClient::readInputRange(int addr, int count, std::vector<uint16_t>& ou
         updateBusErrorStatus(success);
     }
     if (!success) {
-        DEBUG_MODBUS_INPUT_REG_LOG("Slave[" << slave_id_ << "] <- Response: read_input_registers FAILED addr="<<addr<<" count="<<count<<" rc="<<rc<<" errno="<<errno<<" error="<<modbus_strerror(errno));
+        DEBUG_MODBUS_INPUT_REG_LOG("从站[" << slave_id_ << "] <- 响应: 读输入寄存器失败 addr="<<addr<<" count="<<count<<" rc="<<rc<<" errno="<<errno<<" error="<<modbus_strerror(errno));
     } else {
         print_modbus_read_response_hex(slave_id_, 0x04, out.data(), count, true);  // 功能码0x04: 读输入寄存器
-        DEBUG_MODBUS_INPUT_REG_LOG("Slave[" << slave_id_ << "] <- Response: read_input_registers SUCCESS addr="<<addr<<" count="<<count<<" data=[");
+        DEBUG_MODBUS_INPUT_REG_LOG("从站[" << slave_id_ << "] <- 响应: 读输入寄存器成功 addr="<<addr<<" count="<<count<<" data=[");
         for (int i = 0; i < count; i++) {
             uint16_t raw_value = out[i];
             DEBUG_MODBUS_INPUT_REG_LOG("  [" << i << "]=" << raw_value);
@@ -353,7 +353,7 @@ bool ModbusClient::readInputRange(int addr, int count, std::vector<uint16_t>& ou
  */
 bool ModbusClient::readHoldingRange(int addr, int count, std::vector<uint16_t>& out){
     out.resize(count);
-    DEBUG_MODBUS_HOLDING_REG_LOG("Slave[" << slave_id_ << "] -> Sending: read_holding_registers addr=" << addr << " count=" << count);
+    DEBUG_MODBUS_HOLDING_REG_LOG("从站[" << slave_id_ << "] -> 发送: 读保持寄存器 addr=" << addr << " count=" << count);
     print_modbus_read_request_hex(slave_id_, 0x03, addr, count);  // 功能码0x03: 读保持寄存器
     int rc = modbus_read_registers(ctx_, addr, count, out.data());
     bool success = (rc == count);
@@ -362,10 +362,10 @@ bool ModbusClient::readHoldingRange(int addr, int count, std::vector<uint16_t>& 
         updateBusErrorStatus(success);
     }
     if (!success) {
-        DEBUG_MODBUS_HOLDING_REG_LOG("Slave[" << slave_id_ << "] <- Response: read_holding_registers FAILED addr="<<addr<<" count="<<count<<" rc="<<rc);
+        DEBUG_MODBUS_HOLDING_REG_LOG("从站[" << slave_id_ << "] <- 响应: 读保持寄存器失败 addr="<<addr<<" count="<<count<<" rc="<<rc);
     } else {
         print_modbus_read_response_hex(slave_id_, 0x03, out.data(), count, true);  // 功能码0x03: 读保持寄存器
-        DEBUG_MODBUS_HOLDING_REG_LOG("Slave[" << slave_id_ << "] <- Response: read_holding_registers SUCCESS addr="<<addr<<" count="<<count<<" data=[");
+        DEBUG_MODBUS_HOLDING_REG_LOG("从站[" << slave_id_ << "] <- 响应: 读保持寄存器成功 addr="<<addr<<" count="<<count<<" data=[");
         for (int i = 0; i < count; i++) {
             uint16_t raw_value = out[i];
             DEBUG_MODBUS_HOLDING_REG_LOG("  [" << i << "]=" << raw_value);
@@ -394,32 +394,32 @@ bool ModbusClient::readHoldingRange(int addr, int count, std::vector<uint16_t>& 
  */
 bool ModbusClient::readCoilRange(int addr, int count, std::vector<uint8_t>& out){
     out.resize(count);
-    DEBUG_MODBUS_COIL_LOG("Slave[" << slave_id_ << "] -> Sending: read_coils addr=" << addr << " count=" << count);
+    DEBUG_MODBUS_COIL_LOG("从站[" << slave_id_ << "] -> 发送: 读线圈 addr=" << addr << " count=" << count);
     print_modbus_read_request_hex(slave_id_, 0x01, addr, count);  // 功能码0x01: 读线圈
     int rc = modbus_read_bits(ctx_, addr, count, out.data());
     bool success = (rc == count);
     updateBusErrorStatus(success);
     if (!success) {
-        DEBUG_MODBUS_COIL_LOG("Slave[" << slave_id_ << "] <- Response: read_coils FAILED addr="<<addr<<" count="<<count<<" rc="<<rc);
+        DEBUG_MODBUS_COIL_LOG("从站[" << slave_id_ << "] <- 响应: 读线圈失败 addr="<<addr<<" count="<<count<<" rc="<<rc);
     } else {
         print_modbus_read_response_hex(slave_id_, 0x01, out.data(), count, false);  // 功能码0x01: 读线圈
-        DEBUG_MODBUS_COIL_LOG("Slave[" << slave_id_ << "] <- Response: read_coils SUCCESS addr="<<addr<<" count="<<count);
+        DEBUG_MODBUS_COIL_LOG("从站[" << slave_id_ << "] <- 响应: 读线圈成功 addr="<<addr<<" count="<<count);
     }
     return success;
 }
 
 bool ModbusClient::readDiscreteInputRange(int addr, int count, std::vector<uint8_t>& out){
     out.resize(count);
-    DEBUG_MODBUS_DISCRETE_INPUT_LOG("Slave[" << slave_id_ << "] -> Sending: read_discrete_inputs addr=" << addr << " count=" << count);
+    DEBUG_MODBUS_DISCRETE_INPUT_LOG("从站[" << slave_id_ << "] -> 发送: 读离散输入 addr=" << addr << " count=" << count);
     print_modbus_read_request_hex(slave_id_, 0x02, addr, count);  // 功能码0x02: 读离散输入
     int rc = modbus_read_input_bits(ctx_, addr, count, out.data());
     bool success = (rc == count);
     updateBusErrorStatus(success);
     if (!success) {
-        DEBUG_MODBUS_DISCRETE_INPUT_LOG("Slave[" << slave_id_ << "] <- Response: read_discrete_inputs FAILED addr="<<addr<<" count="<<count<<" rc="<<rc);
+        DEBUG_MODBUS_DISCRETE_INPUT_LOG("从站[" << slave_id_ << "] <- 响应: 读离散输入失败 addr="<<addr<<" count="<<count<<" rc="<<rc);
     } else {
         print_modbus_read_response_hex(slave_id_, 0x02, out.data(), count, false);  // 功能码0x02: 读离散输入
-        DEBUG_MODBUS_DISCRETE_INPUT_LOG("Slave[" << slave_id_ << "] <- Response: read_discrete_inputs SUCCESS addr="<<addr<<" count="<<count<<" data=[");
+        DEBUG_MODBUS_DISCRETE_INPUT_LOG("从站[" << slave_id_ << "] <- 响应: 读离散输入成功 addr="<<addr<<" count="<<count<<" data=[");
         for (int i = 0; i < count; i++) {
             DEBUG_MODBUS_DISCRETE_INPUT_LOG("  [" << i << "]=" << (int)out[i]);
         }
@@ -429,24 +429,24 @@ bool ModbusClient::readDiscreteInputRange(int addr, int count, std::vector<uint8
 }
 
 bool ModbusClient::writeSingleCoil(int addr, bool value){
-    DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] -> Sending: write_single_coil addr=" << addr << " value=" << (value ? "ON" : "OFF"));
+    DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] -> 发送: 写单个线圈 addr=" << addr << " value=" << (value ? "ON" : "OFF"));
     print_modbus_write_single_coil_hex(slave_id_, addr, value);
     int rc = modbus_write_bit(ctx_, addr, value ? 1 : 0);
     bool success = (rc == 1);
     updateBusErrorStatus(success);
     if (!success) {
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_single_coil FAILED addr="<<addr<<" value="<<(value?"ON":"OFF")<<" rc="<<rc);
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写单个线圈失败 addr="<<addr<<" value="<<(value?"ON":"OFF")<<" rc="<<rc);
     } else {
         uint16_t coil_value = value ? 0xFF00 : 0x0000;
         print_modbus_write_response_hex(slave_id_, 0x05, addr, coil_value);  // 功能码0x05: 写单个线圈
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_single_coil SUCCESS addr="<<addr<<" value="<<(value?"ON":"OFF"));
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写单个线圈成功 addr="<<addr<<" value="<<(value?"ON":"OFF"));
     }
     return success;
 }
 
 bool ModbusClient::writeMultipleCoils(int addr, const std::vector<bool>& values){
     if (values.empty()) {
-        DEBUG_MODBUS_WARNING("Empty values vector for writeMultipleCoils");
+        DEBUG_MODBUS_WARNING("写多个线圈时值向量为空");
         return true;
     }
     
@@ -456,40 +456,40 @@ bool ModbusClient::writeMultipleCoils(int addr, const std::vector<bool>& values)
         coil_values[i] = values[i] ? 1 : 0;
     }
     
-    DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] -> Sending: write_multiple_coils addr=" << addr << " count=" << values.size());
+    DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] -> 发送: 写多个线圈 addr=" << addr << " count=" << values.size());
     int rc = modbus_write_bits(ctx_, addr, values.size(), coil_values.data());
     bool success = (rc == static_cast<int>(values.size()));
     updateBusErrorStatus(success);
     if (!success) {
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_multiple_coils FAILED addr="<<addr<<" count="<<values.size()<<" rc="<<rc);
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写多个线圈失败 addr="<<addr<<" count="<<values.size()<<" rc="<<rc);
     } else {
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_multiple_coils SUCCESS addr="<<addr<<" count="<<values.size());
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写多个线圈成功 addr="<<addr<<" count="<<values.size());
     }
     return success;
 }
 
 bool ModbusClient::writeSingleRegister(int addr, uint16_t value){
-    DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] -> Sending: write_single_register addr=" << addr << " value=" << value);
+    DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] -> 发送: 写单个寄存器 addr=" << addr << " value=" << value);
     print_modbus_write_single_hex(slave_id_, 0x06, addr, value);  // 功能码0x06: 写单个寄存器
     int rc = modbus_write_register(ctx_, addr, value);
     bool success = (rc == 1);
     updateBusErrorStatus(success);
     if (!success) {
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_single_register FAILED addr="<<addr<<" value="<<value<<" rc="<<rc);
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写单个寄存器失败 addr="<<addr<<" value="<<value<<" rc="<<rc);
     } else {
         print_modbus_write_response_hex(slave_id_, 0x06, addr, value);  // 功能码0x06: 写单个寄存器
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_single_register SUCCESS addr="<<addr<<" value="<<value);
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写单个寄存器成功 addr="<<addr<<" value="<<value);
     }
     return success;
 }
 
 bool ModbusClient::writeMultipleRegisters(int addr, const std::vector<uint16_t>& values){
     if (values.empty()) {
-        DEBUG_MODBUS_WARNING("Empty values vector for writeMultipleRegisters");
+        DEBUG_MODBUS_WARNING("写多个寄存器时值向量为空");
         return true;
     }
     
-    DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] -> Sending: write_multiple_registers addr=" << addr << " count=" << values.size() << " values=[");
+    DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] -> 发送: 写多个寄存器 addr=" << addr << " count=" << values.size() << " values=[");
     for (size_t i = 0; i < values.size() && i < 10; i++) {  // 最多显示前10个值
         DEBUG_MODBUS_WRITE_LOG("  [" << i << "]=" << values[i]);
     }
@@ -501,9 +501,9 @@ bool ModbusClient::writeMultipleRegisters(int addr, const std::vector<uint16_t>&
     bool success = (rc == static_cast<int>(values.size()));
     updateBusErrorStatus(success);
     if (!success) {
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_multiple_registers FAILED addr="<<addr<<" count="<<values.size()<<" rc="<<rc);
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写多个寄存器失败 addr="<<addr<<" count="<<values.size()<<" rc="<<rc);
     } else {
-        DEBUG_MODBUS_WRITE_LOG("Slave[" << slave_id_ << "] <- Response: write_multiple_registers SUCCESS addr="<<addr<<" count="<<values.size());
+        DEBUG_MODBUS_WRITE_LOG("从站[" << slave_id_ << "] <- 响应: 写多个寄存器成功 addr="<<addr<<" count="<<values.size());
     }
     return success;
 }
@@ -596,15 +596,15 @@ void ModbusClient::resetBusError() {
  */
 std::string ModbusClient::getBusErrorInfo() const {
     if (!bus_error_detected_) {
-        return "No bus error detected";
+        return "未检测到总线错误";
     }
     
     auto now = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - first_error_time_);
     
-    return "Bus error detected: " + std::to_string(consecutive_errors_) + 
-           " consecutive errors over " + std::to_string(duration.count()) + 
-           " seconds (threshold: " + std::to_string(bus_error_threshold_) + "s)";
+    return "检测到总线错误: " + std::to_string(consecutive_errors_) + 
+           " 次连续错误，持续 " + std::to_string(duration.count()) + 
+           " 秒 (阈值: " + std::to_string(bus_error_threshold_) + "秒)";
 }
 
 /**
@@ -628,15 +628,15 @@ void ModbusClient::updateBusErrorStatus(bool success) {
             if (!bus_error_detected_) {
                 // 只在第一次检测到总线错误时打印日志
                 bus_error_detected_ = true;
-                DEBUG_MODBUS_ERROR("Bus error detected: " << consecutive_errors_ << " consecutive errors over " 
-                     << duration.count() << " seconds");
+                DEBUG_MODBUS_ERROR("检测到总线错误: " << consecutive_errors_ << " 次连续错误，持续 " 
+                     << duration.count() << " 秒");
             } else {
                 // 定期报告总线错误状态（每1秒报告一次）
                 static auto last_report_time = std::chrono::steady_clock::now();
                 auto time_since_last_report = std::chrono::duration_cast<std::chrono::seconds>(now - last_report_time);
                 if (time_since_last_report.count() >= 1) {
-                    DEBUG_MODBUS_ERROR("Bus error ongoing: " << consecutive_errors_ << " consecutive errors over " 
-                         << duration.count() << " seconds");
+                    DEBUG_MODBUS_ERROR("总线错误持续中: " << consecutive_errors_ << " 次连续错误，持续 " 
+                         << duration.count() << " 秒");
                     last_report_time = now;
                 }
             }
@@ -656,14 +656,14 @@ void ModbusClient::enableAutoReconnect(bool enable, int reconnect_interval_ms, i
     reconnect_interval_ms_.store(std::max(MODBUS_RECONNECT_MIN_INTERVAL_MS, reconnect_interval_ms)); // 最小间隔限制
     max_reconnect_attempts_.store(std::max(1, max_reconnect_attempts));
     
-    DEBUG_MODBUS_COMM_LOG("Auto-reconnect " << (enable ? "enabled" : "disabled") 
-                  << " (interval: " << reconnect_interval_ms_.load() 
-                  << "ms, unlimited attempts)");
+    DEBUG_MODBUS_COMM_LOG("自动重连 " << (enable ? "已启用" : "已禁用") 
+                  << " (间隔: " << reconnect_interval_ms_.load() 
+                  << "毫秒, 无限次尝试)");
 }
 
 bool ModbusClient::reconnect(bool is_bus_error) {
     if (!auto_reconnect_enabled_.load()) {
-        DEBUG_MODBUS_ERROR("Auto-reconnect is disabled");
+        DEBUG_MODBUS_ERROR("自动重连已禁用");
         return false;
     }
     
@@ -673,7 +673,7 @@ bool ModbusClient::reconnect(bool is_bus_error) {
             // 只在第一次被阻止时打印日志，避免重复打印
             static bool last_cannot_reconnect = false;
             if (!last_cannot_reconnect) {
-                DEBUG_MODBUS_ERROR("Cannot attempt reconnect at this time (waiting for reconnect interval)");
+                DEBUG_MODBUS_ERROR("此时无法尝试重连 (等待重连间隔)");
             }
             last_cannot_reconnect = true;
             return false;
@@ -685,21 +685,22 @@ bool ModbusClient::reconnect(bool is_bus_error) {
         
         // 检查设备是否仍然存在（仅对非总线错误）
         if (!checkDeviceExists()) {
-            DEBUG_MODBUS_ERROR("Device " << port_ << " does not exist, cannot reconnect");
+            DEBUG_MODBUS_ERROR("设备 " << port_ << " 不存在，无法重连");
             connected_ = false;  // 设备不存在时更新连接状态
             updateReconnectStats(false);
             return false;
         }
     }
     
-    DEBUG_MODBUS_COMM_LOG("Attempting to reconnect to " << port_ << (is_bus_error ? " (bus error recovery)" : ""));
+    std::string device_prefix = device_type_.empty() ? "" : ("[" + device_type_ + "] ");
+    DEBUG_MODBUS_COMM_LOG(device_prefix << "正在尝试重连到 " << port_ << (is_bus_error ? " (总线错误恢复)" : ""));
     
     // 关闭当前连接
     close();
     
     // 重新创建上下文
     if (!recreateContext()) {
-        DEBUG_MODBUS_ERROR("Failed to recreate Modbus context");
+        DEBUG_MODBUS_ERROR("无法重新创建 Modbus 上下文");
         updateReconnectStats(false);
         return false;
     }
@@ -709,13 +710,13 @@ bool ModbusClient::reconnect(bool is_bus_error) {
     updateReconnectStats(success);
     
     if (success) {
-        DEBUG_MODBUS_COMM_LOG("Successfully reconnected to " << port_);
+        DEBUG_MODBUS_COMM_LOG(device_prefix << "成功重连到 " << port_);
         connected_ = true;  // 确保连接状态立即更新
         if (connection_callback_) {
             connection_callback_(port_, true);
         }
     } else {
-        DEBUG_MODBUS_ERROR("Failed to reconnect to " << port_);
+        DEBUG_MODBUS_ERROR("重连失败: " << port_);
         connected_ = false;  // 确保连接状态立即更新
         if (connection_callback_) {
             connection_callback_(port_, false);
@@ -727,25 +728,25 @@ bool ModbusClient::reconnect(bool is_bus_error) {
 
 std::string ModbusClient::getConnectionStatus() const {
     std::ostringstream oss;
-    oss << "Port: " << port_ << ", Connected: " << (connected_ ? "Yes" : "No");
+    oss << "端口: " << port_ << ", 已连接: " << (connected_ ? "是" : "否");
     
     if (ctx_) {
-        oss << ", Context: Valid";
+        oss << ", 上下文: 有效";
     } else {
-        oss << ", Context: Invalid";
+        oss << ", 上下文: 无效";
     }
     
     if (bus_error_detected_) {
-        oss << ", Bus Error: Yes (" << consecutive_errors_ << " consecutive errors)";
+        oss << ", 总线错误: 是 (" << consecutive_errors_ << " 次连续错误)";
     } else {
-        oss << ", Bus Error: No";
+        oss << ", 总线错误: 否";
     }
     
     if (auto_reconnect_enabled_.load()) {
-        oss << ", Auto-reconnect: Enabled (attempts: " << reconnect_attempts_.load() 
-            << ", unlimited)";
+        oss << ", 自动重连: 已启用 (尝试次数: " << reconnect_attempts_.load() 
+            << ", 无限次)";
     } else {
-        oss << ", Auto-reconnect: Disabled";
+        oss << ", 自动重连: 已禁用";
     }
     
     return oss.str();
@@ -762,19 +763,19 @@ bool ModbusClient::checkDeviceExists() const {
 
 std::string ModbusClient::getReconnectStats() const {
     std::ostringstream oss;
-    oss << "Reconnect attempts: " << reconnect_attempts_.load() 
-        << " (unlimited)";
+    oss << "重连尝试次数: " << reconnect_attempts_.load() 
+        << " (无限次)";
     
     if (reconnect_attempts_.load() > 0) {
         auto now = std::chrono::steady_clock::now();
         auto time_since_last_attempt = std::chrono::duration_cast<std::chrono::milliseconds>(
             now - last_reconnect_attempt_).count();
-        oss << ", Last attempt: " << time_since_last_attempt << "ms ago";
+        oss << ", 上次尝试: " << time_since_last_attempt << "毫秒前";
     }
     
     auto time_since_last_success = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::steady_clock::now() - last_successful_operation_).count();
-    oss << ", Last success: " << time_since_last_success << "s ago";
+    oss << ", 上次成功: " << time_since_last_success << "秒前";
     
     return oss.str();
 }
@@ -789,7 +790,7 @@ bool ModbusClient::recreateContext() {
     // 创建新上下文
     ctx_ = modbus_new_rtu(port_.c_str(), baud_, parity_, data_bits_, stop_bits_);
     if (!ctx_) {
-        DEBUG_MODBUS_ERROR("Failed to recreate Modbus context: " << modbus_strerror(errno));
+        DEBUG_MODBUS_ERROR("无法重新创建 Modbus 上下文: " << modbus_strerror(errno));
         return false;
     }
     
@@ -801,7 +802,7 @@ bool ModbusClient::recreateContext() {
     modbus_set_response_timeout(ctx_, tv.tv_sec, tv.tv_usec);
     modbus_set_byte_timeout(ctx_, tv.tv_sec, tv.tv_usec);
     
-    DEBUG_MODBUS_COMM_LOG("Modbus context recreated successfully");
+    DEBUG_MODBUS_COMM_LOG("Modbus 上下文已成功重新创建");
     return true;
 }
 
@@ -820,7 +821,7 @@ bool ModbusClient::canAttemptReconnect() const {
         // 只在第一次检测到USB设备不可用时打印日志，避免重复刷屏
         static bool last_usb_unavailable = false;
         if (!last_usb_unavailable) {
-            DEBUG_MODBUS_COMM_LOG("USB device not available, waiting for device reconnection...");
+            DEBUG_MODBUS_COMM_LOG("USB 设备不可用，等待设备重新连接...");
         }
         last_usb_unavailable = true;
         return false;
@@ -856,13 +857,13 @@ void ModbusClient::updateReconnectStats(bool success) {
  */
 bool ModbusClient::setSlaveId(int slave_id) {
     if (!ctx_) {
-        DEBUG_MODBUS_ERROR("Modbus context not initialized, cannot set slave ID");
+        DEBUG_MODBUS_ERROR("Modbus 上下文未初始化，无法设置从站 ID");
         return false;
     }
     
     // 验证从站ID范围
     if (slave_id < 1 || slave_id > 247) {
-        DEBUG_MODBUS_ERROR("Invalid slave ID: " << slave_id << " (must be 1-247)");
+        DEBUG_MODBUS_ERROR("无效的从站 ID: " << slave_id << " (必须在 1-247 范围内)");
         return false;
     }
     
@@ -872,7 +873,7 @@ bool ModbusClient::setSlaveId(int slave_id) {
     // 设置Modbus上下文中的从站ID
     int rc = modbus_set_slave(ctx_, slave_id);
     if (rc == -1) {
-        DEBUG_MODBUS_ERROR("Failed to set slave ID: " << modbus_strerror(errno));
+        DEBUG_MODBUS_ERROR("无法设置从站 ID: " << modbus_strerror(errno));
         return false;
     }
     

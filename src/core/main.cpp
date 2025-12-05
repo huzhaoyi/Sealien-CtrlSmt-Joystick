@@ -25,24 +25,24 @@
  * @brief 显示使用帮助信息
  */
 static void showUsage(const char* program_name) {
-    std::cout << "Usage: " << program_name << " [options] [config_file]\n";
+    std::cout << "用法: " << program_name << " [选项] [配置文件]\n";
     std::cout << "\n";
-    std::cout << "Arguments:\n";
-    std::cout << "  config_file    Path to configuration file (optional, default: USB mode)\n";
+    std::cout << "参数:\n";
+    std::cout << "  配置文件      配置文件路径 (可选，默认: USB 模式)\n";
     std::cout << "\n";
-    std::cout << "Options:\n";
-    std::cout << "  -h, --help         Show this help message\n";
+    std::cout << "选项:\n";
+    std::cout << "  -h, --help         显示此帮助信息\n";
     std::cout << "\n";
-    std::cout << "Features:\n";
-    std::cout << "  - Default mode: USB joystick only (no config file needed)\n";
-    std::cout << "  - Modbus mode: Enabled by specifying config file with 'enable_modbus: true'\n";
-    std::cout << "  - Auto-detect USB joysticks and Modbus devices\n";
-    std::cout << "  - Dynamic switching between USB and Modbus modes\n";
-    std::cout << "  - Automatic ROS2 integration when available\n";
+    std::cout << "功能:\n";
+    std::cout << "  - 默认模式: 仅 USB 摇杆 (无需配置文件)\n";
+    std::cout << "  - Modbus 模式: 通过指定包含 'enable_modbus: true' 的配置文件启用\n";
+    std::cout << "  - 自动检测 USB 摇杆和 Modbus 设备\n";
+    std::cout << "  - USB 和 Modbus 模式之间动态切换\n";
+    std::cout << "  - 可用时自动集成 ROS2\n";
     std::cout << "\n";
-    std::cout << "Examples:\n";
-    std::cout << "  " << program_name << "                           # USB mode (no config needed)\n";
-    std::cout << "  " << program_name << " config/modbus/AMSAMOTION_IO8R.yaml # Modbus mode config\n";
+    std::cout << "示例:\n";
+    std::cout << "  " << program_name << "                           # USB 模式 (无需配置)\n";
+    std::cout << "  " << program_name << " config/modbus/AMSAMOTION_IO8R.yaml # Modbus 模式配置\n";
 }
 
 
@@ -73,11 +73,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    DEBUG_CORE_LOG("Starting Sealien Joystick Application...");
+    DEBUG_CORE_LOG("正在启动 Sealien 摇杆应用程序...");
     if (use_config) {
-        DEBUG_CORE_LOG("Config file: " << config_path);
+        DEBUG_CORE_LOG("配置文件: " << config_path);
     } else {
-        DEBUG_CORE_LOG("No config file specified, running in USB mode");
+        DEBUG_CORE_LOG("未指定配置文件，以 USB 模式运行");
     }
 
     try {
@@ -86,24 +86,24 @@ int main(int argc, char** argv) {
 
         // 初始化应用程序
         if (!app_controller.initialize(config_path, true)) {  // 总是启用ROS2
-            DEBUG_CORE_LOG("Failed to initialize application controller");
+            DEBUG_CORE_LOG("应用程序控制器初始化失败");
             return 1;
         }
         
-        DEBUG_CORE_LOG("Application initialized successfully");
-        DEBUG_CORE_LOG("Run mode: " << app_controller.getRunMode());
+        DEBUG_CORE_LOG("应用程序初始化成功");
+        DEBUG_CORE_LOG("运行模式: " << app_controller.getRunMode());
 
         // 运行应用程序主循环
         if (!app_controller.run()) {
-            DEBUG_CORE_LOG("Application run failed");
+            DEBUG_CORE_LOG("应用程序运行失败");
             return 1;
         }
 
-        DEBUG_CORE_LOG("Application completed successfully");
+        DEBUG_CORE_LOG("应用程序成功完成");
         return 0;
 
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("Application failed with exception: " << e.what());
+        DEBUG_CORE_LOG("应用程序异常失败: " << e.what());
         return 1;
     }
 }

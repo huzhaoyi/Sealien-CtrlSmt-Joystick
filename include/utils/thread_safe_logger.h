@@ -156,7 +156,7 @@ private:
 
 // 模块专用线程安全日志宏
 #define THREAD_SAFE_DEBUG_CORE_LOG(msg) ThreadSafeLogger::getInstance().logModuleDebug(COLOR_INFO, "CORE", msg)
-#define THREAD_SAFE_DEBUG_MODBUS_LOG(msg) ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "MODBUS", msg)
+#define THREAD_SAFE_DEBUG_MODBUS_LOG(msg) ThreadSafeLogger::getInstance().logModuleDebug(COLOR_MODBUS, "ACQUISITION", msg)
 #define THREAD_SAFE_DEBUG_JOYSTICK_LOG(msg) ThreadSafeLogger::getInstance().logModuleDebug(COLOR_JOYSTICK, "JOYSTICK", msg)
 #define THREAD_SAFE_DEBUG_ROS2_LOG(msg) ThreadSafeLogger::getInstance().logModuleDebug(COLOR_ROS2, "ROS2", msg)
 #define THREAD_SAFE_DEBUG_UINPUT_LOG(msg) ThreadSafeLogger::getInstance().logModuleDebug(COLOR_UINPUT, "UINPUT", msg)
@@ -167,8 +167,8 @@ private:
 // 模块错误和警告日志宏
 #define THREAD_SAFE_DEBUG_CORE_ERROR(msg) ThreadSafeLogger::getInstance().logModuleError(COLOR_INFO, "CORE", msg)
 #define THREAD_SAFE_DEBUG_CORE_WARNING(msg) ThreadSafeLogger::getInstance().logModuleWarning(COLOR_INFO, "CORE", msg)
-#define THREAD_SAFE_DEBUG_MODBUS_ERROR(msg) ThreadSafeLogger::getInstance().logModuleError(COLOR_MODBUS, "MODBUS", msg)
-#define THREAD_SAFE_DEBUG_MODBUS_WARNING(msg) ThreadSafeLogger::getInstance().logModuleWarning(COLOR_MODBUS, "MODBUS", msg)
+#define THREAD_SAFE_DEBUG_MODBUS_ERROR(msg) ThreadSafeLogger::getInstance().logModuleError(COLOR_MODBUS, "ACQUISITION", msg)
+#define THREAD_SAFE_DEBUG_MODBUS_WARNING(msg) ThreadSafeLogger::getInstance().logModuleWarning(COLOR_MODBUS, "ACQUISITION", msg)
 #define THREAD_SAFE_DEBUG_JOYSTICK_ERROR(msg) ThreadSafeLogger::getInstance().logModuleError(COLOR_JOYSTICK, "JOYSTICK", msg)
 #define THREAD_SAFE_DEBUG_JOYSTICK_WARNING(msg) ThreadSafeLogger::getInstance().logModuleWarning(COLOR_JOYSTICK, "JOYSTICK", msg)
 #define THREAD_SAFE_DEBUG_ROS2_ERROR(msg) ThreadSafeLogger::getInstance().logModuleError(COLOR_ROS2, "ROS2", msg)

@@ -3,8 +3,8 @@
  * @Date: 2025-09-08 11:29:37
  * @LastEditors: Joey.hu hu418@163.com
  * @LastEditTime: 2025-09-08 11:29:37
- * @FilePath: src/core/modbus_data_processor.cpp
- * @Description: Modbus数据处理器实现文件
+ * @FilePath: src/communication/modbus/acquisition_card_processor.cpp
+ * @Description: 采集卡数据处理器实现文件
  * 负责处理Modbus数据的读取、解析和转换
  * Code By SRS-HUZY Compile
  * Unauthorized copying of this file, via any medium is strictly prohibited.
@@ -12,7 +12,7 @@
  * Copyright (c) 2025 by Sealien Robotics, All Rights Reserved.
  */
 
-#include "modbus_data_processor.h"
+#include "acquisition_card_processor.h"
 #include "constants.h"
 #include "utils.h"
 #include "filters.h"
@@ -29,7 +29,7 @@
 
 using json = nlohmann::json;
 
-ModbusDataProcessor::ModbusDataProcessor(Config& config, ModbusClient& modbus_client, UInputDevice* uinput_device, 
+AcquisitionCardProcessor::AcquisitionCardProcessor(Config& config, ModbusClient& modbus_client, UInputDevice* uinput_device, 
                                          rclcpp::Node::SharedPtr ros2_node)
     : config_(config), modbus_client_(modbus_client), uinput_device_(uinput_device), ros2_node_(ros2_node) {
 #ifdef ENABLE_ROS2
@@ -37,7 +37,7 @@ ModbusDataProcessor::ModbusDataProcessor(Config& config, ModbusClient& modbus_cl
 #endif
 }
 
-bool ModbusDataProcessor::initialize() {
+bool AcquisitionCardProcessor::initialize() {
     try {
         // 设置Modbus寄存器最大值（用于电压转换）
         modbus_client_.setModbusMaxValue(config_.getModbusMaxValue());
@@ -58,22 +58,22 @@ bool ModbusDataProcessor::initialize() {
             config_pub_ = ros2_node_->create_publisher<std_msgs::msg::String>(ROS2_TOPIC_CONFIG, ROS2_TOPIC_QUEUE_SIZE);
             control_sub_ = ros2_node_->create_subscription<std_msgs::msg::String>(
                 ROS2_TOPIC_MODBUS_CONTROL, ROS2_TOPIC_QUEUE_SIZE,
-                std::bind(&ModbusDataProcessor::modbusControlCallback, this, std::placeholders::_1));
+                std::bind(&AcquisitionCardProcessor::modbusControlCallback, this, std::placeholders::_1));
             control_response_pub_ = ros2_node_->create_publisher<std_msgs::msg::String>(ROS2_TOPIC_MODBUS_CONTROL, ROS2_TOPIC_QUEUE_SIZE);
         } else {
-            DEBUG_CORE_ERROR("ModbusDataProcessor: ros2_node_ is null, cannot create ROS2 publishers!");
+            DEBUG_CORE_ERROR("采集卡处理器: ros2_node_ 为空，无法创建 ROS2 发布者！");
         }
 #endif
         
         initialized_ = true;
         return true;
     } catch (const std::exception& e) {
-        DEBUG_CORE_LOG("ModbusDataProcessor initialization failed: " << e.what());
+        DEBUG_CORE_LOG("采集卡处理器初始化失败: " << e.what());
         return false;
     }
 }
 
-void ModbusDataProcessor::setAxisMapping(int linear_x_axis, int linear_y_axis, int linear_z_axis,
+void AcquisitionCardProcessor::setAxisMapping(int linear_x_axis, int linear_y_axis, int linear_z_axis,
                                         int angular_x_axis, int angular_y_axis, int angular_z_axis) {
     axis_mapping_.linear_x = linear_x_axis;
     axis_mapping_.linear_y = linear_y_axis;
@@ -83,9 +83,9 @@ void ModbusDataProcessor::setAxisMapping(int linear_x_axis, int linear_y_axis, i
     axis_mapping_.angular_z = angular_z_axis;
 }
 
-bool ModbusDataProcessor::processData() {
+bool AcquisitionCardProcessor::processData() {
     if (!initialized_) {
-        DEBUG_CORE_LOG("ModbusDataProcessor not initialized");
+        DEBUG_CORE_LOG("采集卡处理器未初始化");
         return false;
     }
 
@@ -94,7 +94,7 @@ bool ModbusDataProcessor::processData() {
         // 只在第一次检测到设备不存在时打印日志，避免重复刷屏
         static bool last_device_unavailable = false;
         if (!last_device_unavailable) {
-            DEBUG_MODBUS_COMM_LOG("USB device not available, stopping Modbus operations");
+            DEBUG_MODBUS_COMM_LOG("USB 设备不可用，停止 Modbus 操作");
         }
         last_device_unavailable = true;
         
@@ -145,7 +145,7 @@ bool ModbusDataProcessor::processData() {
             if (slave_ids.size() > 1) {
                 failed_slave_ids.push_back(slave_id);
             } else {
-                DEBUG_MODBUS_ERROR("Failed to set slave ID to " << slave_id);
+                DEBUG_MODBUS_ERROR("无法设置从站 ID 为 " << slave_id);
             }
             fail_count++;
             continue;
@@ -192,7 +192,7 @@ bool ModbusDataProcessor::processData() {
     // 在多从站模式下，汇总打印失败信息
     if (slave_ids.size() > 1 && !failed_slave_ids.empty()) {
         for (int failed_id : failed_slave_ids) {
-            DEBUG_MODBUS_ERROR("Slave[" << failed_id << "] read failed");
+            DEBUG_MODBUS_ERROR("从站[" << failed_id << "] 读取失败");
         }
     }
     
@@ -237,11 +237,11 @@ bool ModbusDataProcessor::processData() {
                 
                 // 如果启用了自动重连，尝试重连（总线错误重连）
                 if (modbus_client_.isAutoReconnectEnabled()) {
-                    DEBUG_MODBUS_ERROR("Attempting automatic reconnection...");
+                    DEBUG_MODBUS_ERROR("正在尝试自动重连...");
                     if (modbus_client_.reconnect(true)) {  // 传递true表示这是总线错误重连
-                        DEBUG_MODBUS_COMM_LOG("Automatic reconnection successful");
+                        DEBUG_MODBUS_COMM_LOG("自动重连成功");
                     } else {
-                        DEBUG_MODBUS_ERROR("Automatic reconnection failed");
+                        DEBUG_MODBUS_ERROR("自动重连失败");
                     }
                 }
             }
@@ -252,14 +252,14 @@ bool ModbusDataProcessor::processData() {
             
             if (last_bus_error_state) {
                 // 第一次清除时立即报告（使用信息级别，因为这是好消息）
-                DEBUG_MODBUS_COMM_LOG("Bus error cleared, communication restored");
+                DEBUG_MODBUS_COMM_LOG("总线错误已清除，通信已恢复");
                 last_clear_report_time = std::chrono::steady_clock::now();
             } else {
                 // 定期报告通信正常状态（每1秒报告一次）
                 auto now = std::chrono::steady_clock::now();
                 auto time_since_last_report = std::chrono::duration_cast<std::chrono::seconds>(now - last_clear_report_time);
                 if (time_since_last_report.count() >= 1) {
-                    DEBUG_MODBUS_COMM_LOG("Modbus communication normal");
+                    DEBUG_MODBUS_COMM_LOG("Modbus 通信正常");
                     last_clear_report_time = now;
                 }
             }
@@ -272,7 +272,7 @@ bool ModbusDataProcessor::processData() {
             publishModbusROS2Messages();
             publishRawModbusData();
         } else {
-            DEBUG_CORE_ERROR("ros2_node_ is null, cannot publish cleared ROS2 messages");
+            DEBUG_CORE_ERROR("ros2_node_ 为空，无法发布已清除的 ROS2 消息");
         }
 #endif
         return false;
@@ -305,14 +305,14 @@ bool ModbusDataProcessor::processData() {
         publishRawModbusData();
         publishConfigData();
     } else {
-        DEBUG_CORE_ERROR("ros2_node_ is null, cannot publish ROS2 messages");
+        DEBUG_CORE_ERROR("ros2_node_ 为空，无法发布 ROS2 消息");
     }
 #endif
 
     return true;
 }
 
-void ModbusDataProcessor::clearAllOutputs() {
+void AcquisitionCardProcessor::clearAllOutputs() {
     if (!uinput_device_) return;
     
     for (auto& a : config_.getAxes()) {
@@ -336,7 +336,7 @@ void ModbusDataProcessor::clearAllOutputs() {
 #endif
 }
 
-void ModbusDataProcessor::collectAddressSets() {
+void AcquisitionCardProcessor::collectAddressSets() {
     // 清空现有集合
     need_in_regs_.clear();
     need_hold_regs_.clear();
@@ -389,7 +389,7 @@ void ModbusDataProcessor::collectAddressSets() {
     }
 }
 
-void ModbusDataProcessor::computeRanges() {
+void AcquisitionCardProcessor::computeRanges() {
     ranges_.in_min = ranges_.in_max = -1;
     ranges_.ho_min = ranges_.ho_max = -1;
     ranges_.co_min = ranges_.co_max = -1;
@@ -425,7 +425,7 @@ void ModbusDataProcessor::computeRanges() {
     }
 }
 
-bool ModbusDataProcessor::readAllData(std::map<int, uint16_t>& in_map,
+bool AcquisitionCardProcessor::readAllData(std::map<int, uint16_t>& in_map,
                                       std::map<int, uint16_t>& ho_map,
                                       std::map<int, uint8_t>& co_map,
                                       std::map<int, uint8_t>& di_map,
@@ -446,10 +446,10 @@ bool ModbusDataProcessor::readAllData(std::map<int, uint16_t>& in_map,
             read_ok = false;
             // 获取当前从站ID用于错误打印
             int current_slave_id = modbus_client_.getSlaveId();
-            DEBUG_MODBUS_ERROR("Slave[" << current_slave_id << "] failed to read input registers: addr=" << ranges_.in_min << ", count=" << count);
+            DEBUG_MODBUS_ERROR("从站[" << current_slave_id << "] 读取输入寄存器失败: addr=" << ranges_.in_min << ", count=" << count);
         }
     } else {
-        DEBUG_CORE_ERROR("Invalid input register range: in_min=" << ranges_.in_min << ", in_max=" << ranges_.in_max);
+        DEBUG_CORE_ERROR("无效的输入寄存器范围: in_min=" << ranges_.in_min << ", in_max=" << ranges_.in_max);
     }
 
     // 读取保持寄存器（可选，失败不影响整体）
@@ -490,7 +490,7 @@ bool ModbusDataProcessor::readAllData(std::map<int, uint16_t>& in_map,
     return has_required_data;
 }
 
-void ModbusDataProcessor::processAxes(const std::map<int, uint16_t>& in_map,
+void AcquisitionCardProcessor::processAxes(const std::map<int, uint16_t>& in_map,
                                       const std::map<int, uint16_t>& ho_map) {
     // 计算动态Modbus值范围
     auto [modbus_min, modbus_max] = calculateModbusRange();
@@ -624,7 +624,7 @@ void ModbusDataProcessor::processAxes(const std::map<int, uint16_t>& in_map,
     }
 }
 
-void ModbusDataProcessor::processAxesMultiSlave(const std::map<int, std::map<int, uint16_t>>& slave_in_maps,
+void AcquisitionCardProcessor::processAxesMultiSlave(const std::map<int, std::map<int, uint16_t>>& slave_in_maps,
                                                 const std::map<int, std::map<int, uint16_t>>& slave_ho_maps) {
     // 计算动态Modbus值范围
     auto [modbus_min, modbus_max] = calculateModbusRange();
@@ -783,7 +783,7 @@ void ModbusDataProcessor::processAxesMultiSlave(const std::map<int, std::map<int
     }
 }
 
-void ModbusDataProcessor::processDiscreteAxes(const std::map<int, uint16_t>& in_map,
+void AcquisitionCardProcessor::processDiscreteAxes(const std::map<int, uint16_t>& in_map,
                                              const std::map<int, uint16_t>& ho_map,
                                              const std::map<int, uint8_t>& co_map,
                                              const std::map<int, uint8_t>& di_map) {
@@ -821,7 +821,7 @@ void ModbusDataProcessor::processDiscreteAxes(const std::map<int, uint16_t>& in_
     }
 }
 
-void ModbusDataProcessor::processButtons(const std::map<int, uint16_t>& in_map,
+void AcquisitionCardProcessor::processButtons(const std::map<int, uint16_t>& in_map,
                                         const std::map<int, uint16_t>& ho_map,
                                         const std::map<int, uint8_t>& co_map,
                                         const std::map<int, uint8_t>& di_map) {
@@ -867,19 +867,19 @@ void ModbusDataProcessor::processButtons(const std::map<int, uint16_t>& in_map,
 }
 
 template<typename T>
-std::pair<int, int> ModbusDataProcessor::minmaxAddr(const std::set<int>& s) {
+std::pair<int, int> AcquisitionCardProcessor::minmaxAddr(const std::set<int>& s) {
     if (s.empty()) return {0, -1};
     return {*s.begin(), *s.rbegin()};
 }
 
-uint16_t ModbusDataProcessor::voltageToModbusValue(double voltage) {
+uint16_t AcquisitionCardProcessor::voltageToModbusValue(double voltage) {
     // 使用配置的Modbus最大值范围进行转换
     uint16_t modbus_max = config_.getModbusMaxValue();
     double normalized = std::clamp(voltage / 10.0, 0.0, 1.0);
     return static_cast<uint16_t>(normalized * modbus_max);
 }
 
-std::pair<uint16_t, uint16_t> ModbusDataProcessor::calculateModbusRange() {
+std::pair<uint16_t, uint16_t> AcquisitionCardProcessor::calculateModbusRange() {
     // 使用配置的Modbus最大值范围进行转换
     uint16_t modbus_max = config_.getModbusMaxValue();
     uint16_t min_modbus = static_cast<uint16_t>((config_.getMinVoltage() / 10.0) * modbus_max);
@@ -888,18 +888,18 @@ std::pair<uint16_t, uint16_t> ModbusDataProcessor::calculateModbusRange() {
 }
 
 #ifdef ENABLE_ROS2
-void ModbusDataProcessor::publishModbusROS2Messages() {
+void AcquisitionCardProcessor::publishModbusROS2Messages() {
     if (!ros2_node_) {
-        DEBUG_CORE_ERROR("publishModbusROS2Messages: ros2_node_ is null");
+        DEBUG_CORE_ERROR("publishModbusROS2Messages: ros2_node_ 为空");
         return;
     }
     
     // 检查发布者是否已初始化
     if (!joy_pub_) {
-        DEBUG_CORE_ERROR("publishModbusROS2Messages: joy_pub_ is null");
+        DEBUG_CORE_ERROR("publishModbusROS2Messages: joy_pub_ 为空");
     }
     if (!twist_pub_) {
-        DEBUG_CORE_ERROR("publishModbusROS2Messages: twist_pub_ is null");
+        DEBUG_CORE_ERROR("publishModbusROS2Messages: twist_pub_ 为空");
     }
     
     // 更新Modbus设备数据
@@ -977,7 +977,7 @@ void ModbusDataProcessor::publishModbusROS2Messages() {
     }
 }
 
-void ModbusDataProcessor::updateRawModbusData(const std::map<int, uint16_t>& in_map,
+void AcquisitionCardProcessor::updateRawModbusData(const std::map<int, uint16_t>& in_map,
                                             const std::map<int, uint16_t>& ho_map,
                                             const std::map<int, uint8_t>& co_map,
                                             const std::map<int, uint8_t>& di_map,
@@ -1010,13 +1010,13 @@ void ModbusDataProcessor::updateRawModbusData(const std::map<int, uint16_t>& in_
     }
 }
 
-void ModbusDataProcessor::publishRawModbusData() {
+void AcquisitionCardProcessor::publishRawModbusData() {
     if (!ros2_node_) {
-        DEBUG_CORE_ERROR("publishRawModbusData: ros2_node_ is null");
+        DEBUG_CORE_ERROR("publishRawModbusData: ros2_node_ 为空");
         return;
     }
     if (!modbus_raw_pub_) {
-        DEBUG_CORE_ERROR("publishRawModbusData: modbus_raw_pub_ is null");
+        DEBUG_CORE_ERROR("publishRawModbusData: modbus_raw_pub_ 为空");
         return;
     }
     
@@ -1068,9 +1068,9 @@ void ModbusDataProcessor::publishRawModbusData() {
     modbus_raw_pub_->publish(msg);
 }
 
-void ModbusDataProcessor::publishConfigData() {
+void AcquisitionCardProcessor::publishConfigData() {
     if (!config_pub_) {
-        DEBUG_CORE_ERROR("publishConfigData: config_pub_ is null");
+        DEBUG_CORE_ERROR("publishConfigData: config_pub_ 为空");
         return;
     }
     
@@ -1179,7 +1179,7 @@ void ModbusDataProcessor::publishConfigData() {
     config_pub_->publish(msg);
 }
 
-void ModbusDataProcessor::modbusControlCallback(const std_msgs::msg::String::SharedPtr msg) {
+void AcquisitionCardProcessor::modbusControlCallback(const std_msgs::msg::String::SharedPtr msg) {
     try {
         // 解析JSON控制命令
         json control_data = json::parse(msg->data);
@@ -1197,7 +1197,7 @@ void ModbusDataProcessor::modbusControlCallback(const std_msgs::msg::String::Sha
                 if (modbus_client_.writeSingleCoil(address, state)) {
                     has_operations = true;
                 } else {
-                    DEBUG_MODBUS_ERROR("Failed to set DO" << address << " to " << (state ? "ON" : "OFF"));
+                    DEBUG_MODBUS_ERROR("无法设置 DO" << address << " 为 " << (state ? "ON" : "OFF"));
                 }
             }
         }
@@ -1213,7 +1213,7 @@ void ModbusDataProcessor::modbusControlCallback(const std_msgs::msg::String::Sha
                 if (modbus_client_.writeSingleRegister(address, register_value)) {
                     has_operations = true;
                 } else {
-                    DEBUG_MODBUS_ERROR("Failed to set analog output register " << address << " to " << register_value);
+                    DEBUG_MODBUS_ERROR("无法设置模拟输出寄存器 " << address << " 为 " << register_value);
                 }
             }
         }
@@ -1243,7 +1243,7 @@ void ModbusDataProcessor::modbusControlCallback(const std_msgs::msg::String::Sha
         }
         
     } catch (const std::exception& e) {
-        DEBUG_CORE_ERROR("Error parsing Modbus control command: " << e.what());
+        DEBUG_CORE_ERROR("解析 Modbus 控制命令时出错: " << e.what());
         
         // 发布错误响应
         json error_response;
@@ -1255,7 +1255,7 @@ void ModbusDataProcessor::modbusControlCallback(const std_msgs::msg::String::Sha
     }
 }
 
-void ModbusDataProcessor::publishControlResponse(const json& control_data, bool success) {
+void AcquisitionCardProcessor::publishControlResponse(const json& control_data, bool success) {
 #ifdef ENABLE_ROS2
     if (control_response_pub_) {
         // 只在真正需要时才发布控制响应（避免频繁的广播日志）

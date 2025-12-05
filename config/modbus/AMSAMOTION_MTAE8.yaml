@@ -7,6 +7,7 @@ enable_modbus: true   # 启用Modbus功能
 #serial_port: auto   # 智能检测模式，自动选择最佳串口设备
 serial_port: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_BG038EVP-if00-port0   # 手动指定串口（符号链接）ls -l /dev/serial/by-id/
 #serial_port: /dev/ttyUSB1   # 手动指定串口（设备节点）
+serial_number: BG038EVP   # USB设备序列号（可选，优先使用序列号匹配设备，即使设备路径改变也能正确识别）
 baud: 115200
 parity: N
 data_bits: 8

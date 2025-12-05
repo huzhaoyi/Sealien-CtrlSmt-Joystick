@@ -63,8 +63,11 @@ def main():
     if len(sys.argv) >= 3:
         os.chdir(sys.argv[2])
     
-    # 创建服务器
-    with socketserver.TCPServer(("", port), FilteredHTTPRequestHandler) as httpd:
+    # 创建服务器，设置SO_REUSEADDR选项以允许端口重用
+    class ReusableTCPServer(socketserver.TCPServer):
+        allow_reuse_address = True
+    
+    with ReusableTCPServer(("", port), FilteredHTTPRequestHandler) as httpd:
         print(f"Serving HTTP on 0.0.0.0 port {port} (http://0.0.0.0:{port}/) ...")
         try:
             httpd.serve_forever()

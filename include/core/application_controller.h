@@ -221,6 +221,9 @@ private:
     // 运行参数
     std::string config_path_;                          ///< 配置文件路径
     double poll_hz_{10.0};                            ///< 轮询频率
+    std::string valve_control_port_;                   ///< 阀控板串口路径
+    std::string main_modbus_serial_number_;           ///< 主 Modbus 设备 USB 序列号（用于重连识别）
+    std::string valve_control_serial_number_;          ///< 阀控板设备 USB 序列号（用于重连识别）
 
     /**
      * @brief 解析符号链接到实际设备路径
@@ -228,4 +231,19 @@ private:
      * @return 实际设备路径，如果解析失败则返回原路径
      */
     std::string resolveSymbolicLink(const std::string& path) const;
+
+    /**
+     * @brief 从设备路径获取 USB 序列号
+     * @param device_path 设备路径
+     * @return USB 序列号，如果获取失败则返回空字符串
+     */
+    std::string getUSBSerialNumber(const std::string& device_path) const;
+
+    /**
+     * @brief 通过 USB 序列号查找设备路径
+     * @param serial_number USB 序列号
+     * @param exclude_ports 要排除的设备路径列表（避免冲突）
+     * @return 设备路径，如果未找到则返回空字符串
+     */
+    std::string findDeviceBySerialNumber(const std::string& serial_number, const std::vector<std::string>& exclude_ports = {}) const;
 };

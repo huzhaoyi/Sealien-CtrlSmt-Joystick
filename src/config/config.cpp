@@ -88,6 +88,11 @@ static Config from_json(const json& j){
         DEBUG_CONFIG_LOG("Smart serial detection enabled (auto mode)");
     }
     
+    // 解析序列号（可选）
+    if (j.contains("serial_number")) {
+        c.serial_number = j["serial_number"].get<std::string>();
+    }
+    
     c.baud        = getI("baud", c.baud);
     std::string p = getS("parity", std::string(1,c.parity));
     c.parity      = p.empty() ? 'N' : p[0];
@@ -133,6 +138,9 @@ static Config from_json(const json& j){
     // 解析阀控板串口通信参数（独立串口）
     if (j.contains("valve_control_port")) {
         c.valve_control_port = j["valve_control_port"].get<std::string>();
+    }
+    if (j.contains("valve_control_serial_number")) {
+        c.valve_control_serial_number = j["valve_control_serial_number"].get<std::string>();
     }
     if (j.contains("valve_control_baud")) {
         c.valve_control_baud = j["valve_control_baud"].get<int>();
@@ -333,6 +341,9 @@ Config ConfigLoader::Load(const std::string& path){
                 j["serial_port"] = serial_port;
             }
         }
+        if (y["serial_number"]) {
+            j["serial_number"] = y["serial_number"].as<std::string>();
+        }
         if (y["baud"]) j["baud"] = y["baud"].as<int>();
         if (y["parity"]) j["parity"] = y["parity"].as<std::string>();
         if (y["data_bits"]) j["data_bits"] = y["data_bits"].as<int>();
@@ -376,6 +387,9 @@ Config ConfigLoader::Load(const std::string& path){
                 } else {
                     j["valve_control_port"] = serial_port;
                 }
+            }
+            if (vc["serial_number"]) {
+                j["valve_control_serial_number"] = vc["serial_number"].as<std::string>();
             }
             if (vc["baud"]) j["valve_control_baud"] = vc["baud"].as<int>();
             if (vc["parity"]) j["valve_control_parity"] = vc["parity"].as<std::string>();

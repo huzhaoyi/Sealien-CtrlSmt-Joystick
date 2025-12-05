@@ -603,7 +603,7 @@ class ROS2DataSubscriber(Node):
 class ROS2WebSocketServer:
     """ROS2 WebSocket服务器"""
     
-    def __init__(self, host='localhost', port=8765):
+    def __init__(self, host='0.0.0.0', port=8765):
         self.host = host
         self.port = port
         self.clients = set()
@@ -1038,7 +1038,7 @@ class ROS2WebSocketServer:
         while self.running:
             try:
                 await self.broadcast_data_update()
-                await asyncio.sleep(0.1)  # 10Hz更新频率
+                await asyncio.sleep(0.05)  # 20Hz更新频率，更流畅且减少卡顿
                 
                 # 定期进行诊断检查
                 current_time = time.time()

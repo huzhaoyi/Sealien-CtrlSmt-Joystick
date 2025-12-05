@@ -12,6 +12,7 @@ valve_control:
   serial_port: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_BG038ITD-if00-port0   # 手动指定串口（符号链接）
   # serial_port: /dev/ttyUSB2   # 阀控板串口设备路径（请根据实际设备修改）
   # serial_port: auto   # 也可以使用智能检测模式（如果支持）
+  serial_number: BG038ITD   # USB设备序列号（可选，优先使用序列号匹配设备，即使设备路径改变也能正确识别）
   baud: 19200        # 阀控板波特率（请根据实际设备设置，支持范围：1200-921600）
   parity: N           # 校验位：N=无校验, E=偶校验, O=奇校验
   data_bits: 8        # 数据位：8

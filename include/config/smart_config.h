@@ -145,6 +145,23 @@ public:
     std::string getSerialPortStatus() const;
 
     /**
+     * @brief 添加需要排除的串口（用于避免与其他设备冲突）
+     * @param port 需要排除的串口路径
+     */
+    void addExcludedPort(const std::string& port);
+
+    /**
+     * @brief 移除排除的串口
+     * @param port 需要移除的串口路径
+     */
+    void removeExcludedPort(const std::string& port);
+
+    /**
+     * @brief 清除所有排除的串口
+     */
+    void clearExcludedPorts();
+
+    /**
      * @brief 手动设置配置（不使用文件加载）
      * @param config 配置对象
      * @return 设置成功返回true，失败返回false
@@ -162,6 +179,7 @@ private:
     bool smart_detection_enabled_;                      // 智能检测是否启用
     std::string original_serial_port_;                   // 原始串口配置
     SerialPortCallback port_callback_;                   // 串口变化回调
+    std::vector<std::string> excluded_ports_;           // 需要排除的串口列表（避免与其他设备冲突）
 
     /**
      * @brief 初始化智能检测器
@@ -181,6 +199,13 @@ private:
      * @param new_port 新的串口路径
      */
     void updateSerialPort(const std::string& new_port);
+
+    /**
+     * @brief 解析串口路径（符号链接到实际设备）
+     * @param path 设备路径（可能是符号链接）
+     * @return 实际设备路径
+     */
+    std::string resolvePortPath(const std::string& path) const;
 };
 
 #endif // SMART_CONFIG_H

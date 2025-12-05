@@ -61,6 +61,13 @@ bool ValveControlProcessor::initialize() {
 }
 
 bool ValveControlProcessor::pollValveStatus() {
+    // 检查连接状态，如果断开则只进行重连，不执行其他操作
+    if (!isConnected()) {
+        std::lock_guard<std::mutex> lock(status_mutex_);
+        status_.valid = false;
+        return false;
+    }
+    
     // 检查是否到了轮询时间
     auto now = std::chrono::steady_clock::now();
     auto time_since_last_poll = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -510,6 +517,11 @@ ValveControlStatus ValveControlProcessor::getStatus() const {
 }
 
 bool ValveControlProcessor::setValveCurrent(int valve_index, double joystick_value) {
+    // 检查连接状态，如果断开则不执行写入操作
+    if (!isConnected()) {
+        return false;
+    }
+    
     if (valve_index < 0 || valve_index >= VALVE_COUNT) {
         last_error_ = "Invalid valve index: " + std::to_string(valve_index);
         DEBUG_VALVE_CONTROL_LOG("Error: " + last_error_);
@@ -561,6 +573,11 @@ bool ValveControlProcessor::setValveCurrents(const std::vector<double>& joystick
 }
 
 bool ValveControlProcessor::setHeartbeat(uint16_t heartbeat_value) {
+    // 检查连接状态，如果断开则不执行写入操作
+    if (!isConnected()) {
+        return false;
+    }
+    
     if (!modbus_client_ || !modbus_client_->writeSingleRegister(HEARTBEAT_REG, heartbeat_value)) {
         last_error_ = "Failed to write heartbeat register";
         DEBUG_VALVE_CONTROL_WRITE_LOG("Error: " + last_error_);
@@ -577,6 +594,36 @@ bool ValveControlProcessor::isConnected() const {
 
 std::string ValveControlProcessor::getLastError() const {
     return last_error_;
+}
+
+bool ValveControlProcessor::reconnect() {
+    if (!modbus_client_) {
+        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Modbus client not created, cannot reconnect");
+        return false;
+    }
+    
+    if (!modbus_client_->isAutoReconnectEnabled()) {
+        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Auto-reconnect is disabled");
+        return false;
+    }
+    
+    DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Triggering reconnection...");
+    bool success = modbus_client_->reconnect();
+    
+    if (success) {
+        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Reconnection successful");
+    } else {
+        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Reconnection failed, will retry automatically");
+    }
+    
+    return success;
+}
+
+void ValveControlProcessor::close() {
+    if (modbus_client_) {
+        DEBUG_VALVE_CONTROL_LOG("ValveControlProcessor: Closing connection...");
+        modbus_client_->close();
+    }
 }
 
 int16_t ValveControlProcessor::joystickToCurrent(double joystick_value) const {
@@ -786,6 +833,11 @@ void ValveControlProcessor::setROS2Node(rclcpp::Node::SharedPtr ros2_node) {
 void ValveControlProcessor::joyCallback(const sensor_msgs::msg::Joy::SharedPtr msg) {
     if (!msg) return;
     
+    // 检查连接状态，如果断开则不处理摇杆输入
+    if (!isConnected()) {
+        return;
+    }
+    
     // 打印接收到的摇杆消息（单行输出，只打印axes）
     std::ostringstream axes_oss;
     axes_oss << "Received joystick axes: [";
@@ -807,6 +859,11 @@ void ValveControlProcessor::joyCallback(const sensor_msgs::msg::Joy::SharedPtr m
 }
 
 void ValveControlProcessor::updateFromJoystickAxes(const std::vector<float>& axes) {
+    // 检查连接状态，如果断开则不处理摇杆输入
+    if (!isConnected()) {
+        return;
+    }
+    
     // 将摇杆轴值映射到阀电流
     // 16个axes映射到32个通道，每个axis拆分成两个正值通道（正向和反向）
     // axis[0] -> valve[0] (正向), valve[1] (反向)

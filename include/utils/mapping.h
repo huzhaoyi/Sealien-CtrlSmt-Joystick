@@ -124,6 +124,7 @@ struct Config
 {
   // 串口通信参数
   std::string serial_port{DEFAULT_SERIAL_PORT}; ///< 串口设备路径
+  std::string serial_number{""};                ///< USB设备序列号（可选，优先使用序列号匹配设备）
   int baud{DEFAULT_BAUD_RATE};                 ///< 波特率
   char parity{DEFAULT_PARITY};                 ///< 校验位（N-无校验，E-偶校验，O-奇校验）
   int data_bits{DEFAULT_DATA_BITS};            ///< 数据位
@@ -137,6 +138,7 @@ struct Config
   
   // 阀控板串口通信参数（独立串口）
   std::string valve_control_port{DEFAULT_SERIAL_PORT}; ///< 阀控板串口设备路径
+  std::string valve_control_serial_number{""};         ///< 阀控板USB设备序列号（可选，优先使用序列号匹配设备）
   int valve_control_baud{DEFAULT_BAUD_RATE};         ///< 阀控板波特率
   char valve_control_parity{DEFAULT_PARITY};         ///< 阀控板校验位
   int valve_control_data_bits{DEFAULT_DATA_BITS};   ///< 阀控板数据位
@@ -164,6 +166,7 @@ struct Config
 
   // 只读访问器（封装内部结构）
   const std::string &getSerialPort() const { return serial_port; }
+  const std::string &getSerialNumber() const { return serial_number; }
   int getBaud() const { return baud; }
   char getParity() const { return parity; }
   int getDataBits() const { return data_bits; }
@@ -192,6 +195,7 @@ struct Config
   bool getEnableValveControl() const { return enable_valve_control; }
   const std::string& getValveControlConfigFile() const { return valve_control_config_file; }
   const std::string& getValveControlPort() const { return valve_control_port; }
+  const std::string& getValveControlSerialNumber() const { return valve_control_serial_number; }
   int getValveControlBaud() const { return valve_control_baud; }
   char getValveControlParity() const { return valve_control_parity; }
   int getValveControlDataBits() const { return valve_control_data_bits; }

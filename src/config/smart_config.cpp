@@ -19,6 +19,7 @@
 #include <limits.h>
 #include <linux/limits.h>
 #include <stdlib.h>
+#include <vector>
 
 SmartConfigManager::SmartConfigManager() 
     : smart_detection_enabled_(false) {
@@ -78,7 +79,7 @@ bool SmartConfigManager::loadConfig(const std::string& config_path, bool enable_
                     } else {
                         // 首选设备不可用，使用智能检测选择的设备
                         DEBUG_CORE_LOG("Auto-selected best device: " << best_device << " (preferred: " << preferred_device << ", original: " << original_serial_port_ << ")");
-                        updateSerialPort(best_device);
+                    updateSerialPort(best_device);
                     }
                 } else {
                     DEBUG_CORE_WARNING("No suitable serial device found, using original configuration");
@@ -167,7 +168,69 @@ std::string SmartConfigManager::selectBestDevice(const std::string& preferred_de
         return preferred_device;
     }
     
-    return detector_->selectBestDevice(preferred_device);
+    // 获取所有检测到的设备
+    auto devices = detector_->getConnectedDevices();
+    
+    // 如果指定了首选设备且该设备存在且未被排除，优先选择
+    if (!preferred_device.empty()) {
+        bool is_excluded = false;
+        for (const auto& excluded : excluded_ports_) {
+            if (preferred_device == excluded || resolvePortPath(preferred_device) == resolvePortPath(excluded)) {
+                is_excluded = true;
+                break;
+            }
+        }
+        
+        if (!is_excluded) {
+            for (const auto& device : devices) {
+                if (device.device_path == preferred_device || 
+                    resolvePortPath(device.device_path) == resolvePortPath(preferred_device)) {
+                    DEBUG_CORE_LOG("Selected preferred device: " << preferred_device);
+                    return preferred_device;
+                }
+            }
+        }
+    }
+    
+    // 根据优先级选择最佳设备，排除已占用的串口
+    std::string best_device;
+    int best_priority = -1;
+    
+    for (const auto& device : devices) {
+        // 检查是否被排除
+        bool is_excluded = false;
+        for (const auto& excluded : excluded_ports_) {
+            if (device.device_path == excluded || 
+                resolvePortPath(device.device_path) == resolvePortPath(excluded)) {
+                is_excluded = true;
+                break;
+            }
+        }
+        
+        if (is_excluded) {
+            continue; // 跳过被排除的设备
+        }
+        
+        if (device.priority > best_priority) {
+            best_priority = device.priority;
+            best_device = device.device_path;
+        }
+    }
+    
+    if (!best_device.empty()) {
+        DEBUG_CORE_LOG("Selected best device: " << best_device << " (priority: " << best_priority << ")");
+    }
+    
+    return best_device;
+}
+
+std::string SmartConfigManager::resolvePortPath(const std::string& path) const {
+    // 解析符号链接到实际设备路径
+    char resolved_path[PATH_MAX];
+    if (realpath(path.c_str(), resolved_path) != nullptr) {
+        return std::string(resolved_path);
+    }
+    return path; // 如果解析失败，返回原路径
 }
 
 void SmartConfigManager::setSerialPortCallback(SerialPortCallback callback) {
@@ -211,7 +274,7 @@ bool SmartConfigManager::autoSwitchToAvailablePort() {
     // 检测设备
     detectSerialDevices();
     
-    // 选择最佳设备
+    // 选择最佳设备（排除已占用的串口）
     std::string best_device = selectBestDevice();
     if (!best_device.empty() && best_device != config_->getSerialPort()) {
         DEBUG_CORE_LOG("Auto-switching to available port: " << best_device);
@@ -220,6 +283,35 @@ bool SmartConfigManager::autoSwitchToAvailablePort() {
     }
     
     return false;
+}
+
+void SmartConfigManager::addExcludedPort(const std::string& port) {
+    if (port.empty()) {
+        return;
+    }
+    
+    // 检查是否已存在
+    for (const auto& excluded : excluded_ports_) {
+        if (excluded == port) {
+            return; // 已存在，无需重复添加
+        }
+    }
+    
+    excluded_ports_.push_back(port);
+    DEBUG_CORE_LOG("Added excluded port: " << port);
+}
+
+void SmartConfigManager::removeExcludedPort(const std::string& port) {
+    excluded_ports_.erase(
+        std::remove(excluded_ports_.begin(), excluded_ports_.end(), port),
+        excluded_ports_.end()
+    );
+    DEBUG_CORE_LOG("Removed excluded port: " << port);
+}
+
+void SmartConfigManager::clearExcludedPorts() {
+    excluded_ports_.clear();
+    DEBUG_CORE_LOG("Cleared all excluded ports");
 }
 
 std::string SmartConfigManager::getSerialPortStatus() const {

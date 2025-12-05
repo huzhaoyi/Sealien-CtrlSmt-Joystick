@@ -4487,6 +4487,10 @@
             }
         }
 
+        // 性能优化：使用requestAnimationFrame批量更新DOM
+        let pendingUpdate = null;
+        let updateScheduled = false;
+        
         // 处理WebSocket消息
         function handleWebSocketMessage(data) {
             switch (data.type) {
@@ -4494,7 +4498,8 @@
                     updateAllData(data.data);
                     break;
                 case 'data_update':
-                    updateAllData(data.data);
+                    // 使用节流机制，避免过于频繁的更新
+                    scheduleUpdate(data.data);
                     break;
                 case 'logs_update':
                     updateLogs(data.data);
@@ -4507,12 +4512,38 @@
                 default:
             }
         }
+        
+        // 调度更新，使用requestAnimationFrame优化性能
+        function scheduleUpdate(data) {
+            pendingUpdate = data;
+            if (!updateScheduled) {
+                updateScheduled = true;
+                requestAnimationFrame(() => {
+                    if (pendingUpdate) {
+                        updateAllData(pendingUpdate);
+                        pendingUpdate = null;
+                    }
+                    updateScheduled = false;
+                });
+            }
+        }
 
-        // 更新所有数据
+        // 更新所有数据（优化版本，减少不必要的DOM操作）
+        let lastUpdateTime = 0;
+        const MIN_UPDATE_INTERVAL = 16; // 约60fps，16ms最小更新间隔
+        
         function updateAllData(data) {
             // 保存当前数据到全局变量，供其他函数使用
             window.currentData = data;
             
+            // 节流：限制更新频率，避免过于频繁的DOM操作
+            const now = performance.now();
+            if (now - lastUpdateTime < MIN_UPDATE_INTERVAL) {
+                return; // 跳过这次更新
+            }
+            lastUpdateTime = now;
+            
+            // 批量更新，减少重绘次数
             if (data.joystick) {
                 updateJoystickData(data.joystick);
             }
@@ -5500,7 +5531,7 @@
                 window.lastHeartbeatTime = heartbeatData.timestamp;
                 
                 // 可以在这里添加更多心跳数据的处理逻辑
-                console.log('收到心跳数据:', heartbeatData);
+                // console.log('收到心跳数据:', heartbeatData);
             }
         }
 
@@ -6293,6 +6324,28 @@
             }
         }
 
+        // 全局错误处理：抑制浏览器扩展相关的警告
+        window.addEventListener('error', function(event) {
+            // 忽略 Chrome 扩展相关的错误
+            if (event.message && (
+                event.message.includes('runtime.lastError') ||
+                event.message.includes('Extension context invalidated') ||
+                event.message.includes('chrome-extension://')
+            )) {
+                event.preventDefault();
+                return false;
+            }
+        });
+        
+        // 捕获未处理的 Promise 拒绝（Chrome 扩展相关）
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && (
+                event.reason.message && event.reason.message.includes('runtime.lastError')
+            )) {
+                event.preventDefault();
+            }
+        });
+        
         // 页面加载完成后连接WebSocket
         document.addEventListener('DOMContentLoaded', function() {
             connectWebSocket();

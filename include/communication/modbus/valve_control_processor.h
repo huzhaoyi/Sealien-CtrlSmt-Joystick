@@ -120,6 +120,17 @@ public:
      */
     std::string getLastError() const;
 
+    /**
+     * @brief 触发重连（用于USB设备热插拔）
+     * @return 重连成功返回true
+     */
+    bool reconnect();
+
+    /**
+     * @brief 关闭连接（用于USB设备断开）
+     */
+    void close();
+
 #ifdef ENABLE_ROS2
     /**
      * @brief 设置ROS2节点（用于订阅摇杆话题）

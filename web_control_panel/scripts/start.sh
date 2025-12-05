@@ -234,13 +234,25 @@ start_http_server() {
 
 # 显示访问信息
 show_access_info() {
+    # 获取本机IP地址
+    local LOCAL_IP=$(hostname -I | awk '{print $1}')
+    if [ -z "$LOCAL_IP" ]; then
+        LOCAL_IP=$(ip route get 8.8.8.8 2>/dev/null | awk '{print $7; exit}')
+    fi
+    if [ -z "$LOCAL_IP" ]; then
+        LOCAL_IP="<本机IP>"
+    fi
+    
     print_message $GREEN "=========================================="
     print_message $GREEN "🎮 Sealien 手柄转换器 Web控制面板已启动 Note by:Joey_Hu"
     print_message $GREEN "=========================================="
-    print_message $CYAN "Web界面访问地址:"
+    print_message $CYAN "本地访问地址:"
     print_message $CYAN "  http://localhost:$HTTP_PORT/frontend/web_dashboard.html"
+    print_message $CYAN "局域网访问地址:"
+    print_message $CYAN "  http://$LOCAL_IP:$HTTP_PORT/frontend/web_dashboard.html"
     print_message $CYAN "WebSocket服务器:"
-    print_message $CYAN "  ws://localhost:8765"
+    print_message $CYAN "  ws://localhost:8765 (本地)"
+    print_message $CYAN "  ws://$LOCAL_IP:8765 (局域网)"
     print_message $CYAN "数据源: ROS2话题"
     print_message $CYAN "  - /joystick (手柄数据)"
     print_message $CYAN "  - /cmd_vel (速度命令)"
